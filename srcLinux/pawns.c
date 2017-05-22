@@ -92,6 +92,7 @@ INLINE Score pawn_evaluate(const Pos *pos, PawnEntry *e, const int Us)
   const int Up    = (Us == WHITE ? DELTA_N  : DELTA_S);
   const int Right = (Us == WHITE ? DELTA_NE : DELTA_SW);
   const int Left  = (Us == WHITE ? DELTA_NW : DELTA_SE);
+  const int Them  = (Us == WHITE ? BLACK : WHITE);
 
   Bitboard b, neighbours, stoppers, doubled, supported, phalanx;
   Bitboard lever, leverPush, connected;
@@ -100,7 +101,7 @@ INLINE Score pawn_evaluate(const Pos *pos, PawnEntry *e, const int Us)
   Score score = SCORE_ZERO;
 
   Bitboard ourPawns   = pieces_cp(Us, PAWN);
-  Bitboard theirPawns = pieces_p(PAWN) ^ ourPawns;
+  Bitboard theirPawns = pieces_cp(Them, PAWN);
 
   e->passedPawns[Us] = e->pawnAttacksSpan[Us] = 0;
   e->kingSquares[Us] = SQ_NONE;
@@ -154,6 +155,15 @@ INLINE Score pawn_evaluate(const Pos *pos, PawnEntry *e, const int Us)
       && popcount(supported) >= popcount(lever)
       && popcount(phalanx)   >= popcount(leverPush))
       e->passedPawns[Us] |= sq_bb(s);
+	  
+	  else if (    stoppers == SquareBB[s + Up]
+               &&  relative_rank_s(Us, s) >= RANK_5)
+	   { 
+          b = shift_bb(Up, supported) & ~theirPawns;
+             while (b)
+                 if(!more_than_one(theirPawns & PawnAttacks[Us][pop_lsb(&b)]))
+                     e->passedPawns[Us] |= sq_bb(s);
+	   }		 
 
     // Score this pawn
     if (!neighbours)
@@ -169,7 +179,7 @@ INLINE Score pawn_evaluate(const Pos *pos, PawnEntry *e, const int Us)
       score += Connected[opposed][!!phalanx][!!more_than_one(supported)][relative_rank_s(Us, s)];
 
     if (doubled & !supported)
-       score -= Doubled;
+        score -= Doubled;
 
     if (lever)
       score += Lever[relative_rank_s(Us, s)];

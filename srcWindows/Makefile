@@ -72,7 +72,7 @@ popcnt = no
 sse = no
 pext = no
 native = no
-numa = yes
+numa = no
 
 ### 2.2 Architecture specific
 
