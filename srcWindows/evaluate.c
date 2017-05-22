@@ -187,16 +187,18 @@ INLINE void evalinfo_init(const Pos *pos, EvalInfo *ei, const int Us)
   ei->attackedBy[Us][0] |= ei->attackedBy[Us][PAWN] = ei->pi->pawnAttacks[Us];
   ei->attackedBy2[Us] = ei->attackedBy[Us][PAWN] & ei->attackedBy[Us][KING];
 
-  // Init king safety tables only if we are going to use them
-  if (pos_non_pawn_material(Us) >= RookValueMg + KnightValueMg) {
-    ei->kingRing[Them] = b;
-	if (relative_rank(Them, square_of(Them, KING)) == RANK_1)
-	ei->kingRing[Them] |= shift_bb(Up, b);
-    ei->kingAttackersCount[Us] = popcount(b & ei->attackedBy[Us][PAWN]);
-    ei->kingAdjacentZoneAttacksCount[Us] = ei->kingAttackersWeight[Us] = 0;
+  // Init our king safety tables only if we are going to use them
+  if (pos_non_pawn_material(Them) >= RookValueMg + KnightValueMg)
+  {
+	 ei->kingRing[Us] = b;
+     if (relative_rank(Us, square_of(Us, KING)) == RANK_1)
+         ei->kingRing[Us] |= shift_bb(Up, b);
+	
+    ei->kingAttackersCount[Them] = popcount(b & ei->pe->pawnAttacks[Them]);
+    ei->kingAdjacentZoneAttacksCount[Them] = ei->kingAttackersWeight[Them] = 0;
   }
   else
-    ei->kingRing[Them] = ei->kingAttackersCount[Us] = 0;
+	ei->kingRing[Us] = ei->kingAttackersCount[Them] = 0;
 }
 
 // evaluate_piece() assigns bonuses and penalties to the pieces of a given
