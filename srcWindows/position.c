@@ -1492,7 +1492,7 @@ static int pos_is_ok(Pos *pos, int *failedStep)
         return 0;
     }
 
-    if (step == Lists) 	
+    if (step == Lists)
       for (int c = 0; c < 2; c++)
         for (int pt = PAWN; pt <= KING; pt++) {
           if (piece_count(c, pt) != popcount(pieces_cp(c, pt)))
@@ -1503,7 +1503,7 @@ static int pos_is_ok(Pos *pos, int *failedStep)
                 || pos->index[piece_list(c, pt)[i]] != i)
               return 0;
         }
-		
+
     if (step == Castling)
       for (int c = 0; c < 2; c++)
         for (int s = 0; s < 2; s++) {

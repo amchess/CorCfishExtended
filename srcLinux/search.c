@@ -51,13 +51,13 @@ Depth TB_ProbeDepth;
 #define NonPV 0
 #define PV    1
 
-// Sizes and phases of the skip-blocks, used for distributing search depths across the threads
+// Sizes and phases of the skip-blocks, used for distributing search depths across the threads.
 const int skipSize[]  = { 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4 };
 const int skipPhase[] = { 0, 1, 0, 1, 2, 3, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 6, 7 };
 
 // Razoring and futility margin based on depth
 // razor_margin[0] is unused as long as depth >= ONE_PLY in search
-static const int razor_margin[4] = { 0, 570, 603, 554 };
+static const int razor_margin[] = { 0, 570, 603, 554 };
 
 #define futility_margin(d) ((Value)(150 * (d) / ONE_PLY))
 
@@ -85,8 +85,8 @@ struct Skill {
 //  Move best = 0;
 };
 
-// Easy move code for detecting an 'easy move'. If the PV is stable across
-// multiple search iterations, we can quickly return the best move.
+// EasyMoveManager structure is used to detect an 'easy move'. When the PV is stable
+// across multiple search iterations, we can quickly return the best move.
 
 struct {
   int stableCnt;
@@ -122,9 +122,6 @@ static void easy_move_update(Pos *pos, Move *newPv)
     undo_move(pos, newPv[0]);
   }
 }
-
-// Set of rows with half bits set to 1 and half to 0. It is used to allocate
-// the search depths across the threads.
 
 static Value DrawValue[2];
 //static CounterMoveHistoryStats CounterMoveHistory;
@@ -187,8 +184,8 @@ void search_clear()
 
   for (int idx = 0; idx < Threads.num_threads; idx++) {
     Pos *pos = Threads.pos[idx];
-    stats_clear(pos->counterMoves);
     stats_clear(pos->history);
+    stats_clear(pos->counterMoves);
   }
 
   mainThread.previousScore = VALUE_INFINITE;
@@ -305,7 +302,7 @@ void mainthread_search(void)
       Pos *p = Threads.pos[idx];
       Depth depthDiff = p->completedDepth - bestThread->completedDepth;
       Value scoreDiff = p->rootMoves->move[0].score - bestThread->rootMoves->move[0].score;
-     if (scoreDiff > 0 && depthDiff >= 0)
+      if (scoreDiff > 0 && depthDiff >= 0)
         bestThread = p;
     }
   }
@@ -327,6 +324,7 @@ void mainthread_search(void)
   fflush(stdout);
   IO_UNLOCK;
 }
+
 
 /// thread_search() is the main iterative deepening loop. It calls search()
 /// repeatedly with increasing depth until the allocated thinking time has
@@ -379,14 +377,15 @@ if(option_value(OPT_TACTICALMODE)) multiPV=256;
          && !Signals.stop
          && (!Limits.depth || threads_main()->rootDepth <= Limits.depth))
   {
-	  // Distribute search depths across the threads
-       if (pos->thread_idx)
-       {
-           int i = (pos->thread_idx - 1) % 20;
-           if (((pos->rootDepth / ONE_PLY + pos_game_ply() + skipPhase[i]) / skipSize[i]) % 2)
-               continue;
-       }
-
+ 
+    // Distribute search depths across the threads
+     if (pos->thread_idx)
+     {
+         int i = (pos->thread_idx - 1) % 20;
+         if (((pos->rootDepth / ONE_PLY + pos_game_ply() + skipPhase[i]) / skipSize[i]) % 2)
+             continue;
+     }
+	 
     // Age out PV variability metric
     if (pos->thread_idx == 0) {
       mainThread.bestMoveChanges *= 0.505;
@@ -433,7 +432,7 @@ if(option_value(OPT_TACTICALMODE)) multiPV=256;
         // search the already searched PV lines are preserved.
         stable_sort(&rm->move[PVIdx], PVLast - PVIdx);
 
-        // If search has been stopped, break immediately. Sorting and
+        // If search has been stopped, we break immediately. Sorting and
         // writing PV back to TT is safe because RootMoves is still
         // valid, although it refers to the previous iteration.
         if (Signals.stop)
@@ -455,7 +454,7 @@ if(option_value(OPT_TACTICALMODE)) multiPV=256;
         // re-search, otherwise exit the loop.
         if (bestValue <= alpha) {
           beta = (alpha + beta) / 2;
-          alpha = max(bestValue - delta1, -VALUE_INFINITE);
+		  alpha = max(bestValue - delta1, -VALUE_INFINITE);
 
           if (pos->thread_idx == 0) {
             mainThread.failedLow = 1;

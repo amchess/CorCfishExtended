@@ -253,7 +253,7 @@ INLINE unsigned distance_r(Square x, Square y)
 
 INLINE Bitboard attacks_bb(Piece pt, Square s, Bitboard occupied)
 {
-  assert(pt != PAWN);
+   assert(pt != PAWN);
   
     switch (pt)
   {
