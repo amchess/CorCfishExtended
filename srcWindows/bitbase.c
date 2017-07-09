@@ -80,7 +80,7 @@ static uint8_t initial(unsigned idx)
 
   // Immediate draw if it is a stalemate or a king captures undefended pawn
   if (   us == BLACK
-      && (  !(PseudoAttacks[KING][ksq[us]] & ~(PseudoAttacks[KING][ksq[us ^ 1]] | PawnAttacks[us ^ 1][psq]))
+      && (  !(PseudoAttacks[KING][ksq[us]] & ~(PseudoAttacks[KING][ksq[us ^ 1]] |  PawnAttacks[us ^ 1][psq]))
           || (PseudoAttacks[KING][ksq[us]] & sq_bb(psq) & ~PseudoAttacks[KING][ksq[us ^ 1]])))
     return RES_DRAW;
 

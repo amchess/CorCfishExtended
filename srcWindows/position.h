@@ -155,8 +155,8 @@ struct Pos {
   Depth completedDepth;
 
   // Pointers to thread-specific tables.
-  MoveStats *counterMoves;
   HistoryStats *history;
+  MoveStats *counterMoves;
   PawnEntry *pawnTable;
   MaterialEntry *materialTable;
   CounterMoveHistoryStats *counterMoveHistory;
@@ -298,6 +298,12 @@ INLINE int advanced_pawn_push(const Pos *pos, Move m)
 {
   return   type_of_p(moved_piece(m)) == PAWN
         && relative_rank_s(pos_stm(), from_sq(m)) > RANK_4;
+}
+
+INLINE int far_advanced_pawn_push(const Pos *pos, Move m)
+{
+  return   type_of_p(moved_piece(m)) == PAWN
+        && relative_rank_s(pos_stm(), from_sq(m)) > RANK_6;
 }
 
 INLINE int opposite_bishops(const Pos *pos)

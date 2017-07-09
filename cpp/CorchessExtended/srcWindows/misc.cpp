@@ -1,5 +1,5 @@
 /*
-	Stockfish, a UCI chess playing engine derived from Glaurung 2.1
+  Stockfish, a UCI chess playing engine derived from Glaurung 2.1
   Copyright (C) 2004-2008 Tord Romstad (Glaurung author)
   Copyright (C) 2008-2015 Marco Costalba, Joona Kiiski, Tord Romstad
   Copyright (C) 2015-2017 Marco Costalba, Joona Kiiski, Gary Linscott, Tord Romstad
@@ -124,7 +124,7 @@ const string engine_info(bool to_uci) {
   stringstream ss, date(__DATE__); // From compiler, format is "Sep 21 2008"
   
   unsigned int n = std::thread::hardware_concurrency();
-  ss << "CorChessExtended 1.3" << Version << setfill('0');
+  ss << "CorChessExtended 1.6" << Version << setfill('0');
 
 
 
@@ -215,8 +215,8 @@ void prefetch(void* addr) {
 
 void prefetch2(void* addr) {
 
-    prefetch(addr);
-    prefetch((uint8_t*)addr + 64);
+  prefetch(addr);
+  prefetch((uint8_t*)addr + 64);
 }
 
 namespace WinProcGroup {

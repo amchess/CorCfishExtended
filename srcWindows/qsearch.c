@@ -44,6 +44,7 @@ Value name_NT_InCheck(qsearch)(Pos* pos, Stack* ss, Value alpha, BETA_ARG
 
   bestMove = 0;
   moveCount = 0;
+
   // Check for an instant draw or if the maximum ply has been reached
   if (is_draw(pos) || ss->ply >= MAX_PLY)
     return ss->ply >= MAX_PLY && !InCheck ? evaluate(pos)
@@ -117,14 +118,15 @@ Value name_NT_InCheck(qsearch)(Pos* pos, Stack* ss, Value alpha, BETA_ARG
     assert(move_is_ok(move));
 
     givesCheck = gives_check(pos, ss, move);
+	
 	moveCount++;
+
     // Futility pruning
     if (   !InCheck
         && !givesCheck
         &&  futilityBase > -VALUE_KNOWN_WIN
-        && !advanced_pawn_push(pos, move)) {
-      assert(type_of_m(move) != ENPASSANT); // Due to !pos.advanced_pawn_push
-
+        && type_of_m(move) == NORMAL) {
+      
       futilityValue = futilityBase + PieceValue[EG][piece_on(to_sq(move))];
 
       if (futilityValue <= alpha) {
@@ -140,13 +142,13 @@ Value name_NT_InCheck(qsearch)(Pos* pos, Stack* ss, Value alpha, BETA_ARG
 
     // Detect non-capture evasions that are candidates to be pruned
     evasionPrunable =    InCheck
-	                 &&  (depth != DEPTH_ZERO || moveCount > 2)
+                     &&  (depth != DEPTH_ZERO || moveCount > 2)	
                      &&  bestValue > VALUE_MATED_IN_MAX_PLY
                      && !is_capture(pos, move);
 
     // Don't search moves with negative SEE values
     if (  (!InCheck || evasionPrunable)
-        &&  type_of_m(move) != PROMOTION
+        &&  (depth != DEPTH_ZERO || type_of_m(move) != PROMOTION)
         &&  !see_test(pos, move, 0))
       continue;
 
@@ -154,10 +156,11 @@ Value name_NT_InCheck(qsearch)(Pos* pos, Stack* ss, Value alpha, BETA_ARG
     prefetch(tt_first_entry(key_after(pos, move)));
 
     // Check for legality just before making the move
-    if (!is_legal(pos, move)){
-		moveCount--;
-		continue;
-	}
+    if (!is_legal(pos, move))
+    {
+      moveCount--;
+      continue;
+    }
 
     ss->currentMove = move;
 

@@ -232,12 +232,12 @@ void bitboards_init()
           Square to = s + (Square)(c == WHITE ? steps[pt][i] : -steps[pt][i]);
 
           if (square_is_ok(to) && distance(s, to) < 3)
-            {
-                      if (pt == PAWN)
-                          PawnAttacks[c][s] |= sq_bb(to);
-                      else
-                          PseudoAttacks[pt][s] |= sq_bb(to);
-                  }
+          {
+              if (pt == PAWN)
+                  PawnAttacks[c][s] |= sq_bb(to);
+              else
+                  PseudoAttacks[pt][s] |= sq_bb(to);
+          }
         }
 
   init_sliding_attacks();

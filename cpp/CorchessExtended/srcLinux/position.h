@@ -136,7 +136,7 @@ public:
   void undo_null_move();
 
   // Static Exchange Evaluation
-  bool see_ge(Move m, Value value = VALUE_ZERO) const;
+  bool see_ge(Move m, Value threshold = VALUE_ZERO) const;
 
   // Accessing hash keys
   Key key() const;
@@ -150,7 +150,6 @@ public:
   int game_ply() const;
   bool is_chess960() const;
   Thread* this_thread() const;
-  uint64_t nodes_searched() const;
   bool is_draw(int ply) const;
   int rule50_count() const;
   Score psq_score() const;
@@ -158,7 +157,7 @@ public:
   Value non_pawn_material() const;
 
   // Position consistency check, for debugging
-  bool pos_is_ok(int* failedStep = nullptr) const;
+  bool pos_is_ok() const;
   void flip();
 
 private:
@@ -184,7 +183,6 @@ private:
   int castlingRightsMask[SQUARE_NB];
   Square castlingRookSquare[CASTLING_RIGHT_NB];
   Bitboard castlingPath[CASTLING_RIGHT_NB];
-  uint64_t nodes;
   int gamePly;
   Color sideToMove;
   Thread* thisThread;
@@ -347,10 +345,6 @@ inline int Position::game_ply() const {
 
 inline int Position::rule50_count() const {
   return st->rule50;
-}
-
-inline uint64_t Position::nodes_searched() const {
-  return nodes;
 }
 
 inline bool Position::opposite_bishops() const {
