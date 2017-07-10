@@ -405,11 +405,15 @@ moves_loop: // When in check search starts from here.
              &&  see_test(pos, move, 0))
        extension = ONE_PLY;
  
+<<<<<<< HEAD
     else if (   far_advanced_pawn_push(pos, move)
 			 && pos_non_pawn_material(pos_stm()) <=  RookValueMg)
 	   extension = ONE_PLY;
  
     // Calculate new depth for this move
+=======
+    // Update the current move (this must be done after singular extension search)
+>>>>>>> f7857fa75b67190cf1efdb51789c7804d3fd5a71
     newDepth = depth - ONE_PLY + extension;
 
     // Step 13. Pruning at shallow depth

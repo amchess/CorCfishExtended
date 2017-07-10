@@ -108,7 +108,11 @@ void print_engine_info(int to_uci)
 {
   char my_date[64];
 
+<<<<<<< HEAD
   printf("CorCfishExtended_1.5 %s", Version);
+=======
+  printf("CorCfishExtended_1.4 %s", Version);
+>>>>>>> f7857fa75b67190cf1efdb51789c7804d3fd5a71
 
   if (strlen(Version) == 0) {
     int day, month, year;

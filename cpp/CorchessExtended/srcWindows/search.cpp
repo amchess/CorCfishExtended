@@ -286,7 +286,6 @@ void MainThread::search() {
       Thread::search(); // Let's start searching!
    }
   }
-
   // When playing in 'nodes as time' mode, subtract the searched nodes from
   // the available ones before exiting.
   if (Limits.npmsec)
@@ -575,7 +574,7 @@ namespace {
     Depth extension, newDepth;
     Value bestValue, value, ttValue, eval;
     bool ttHit, inCheck, givesCheck, singularExtensionNode, improving;
-    bool captureOrPromotion, doFullDepthSearch, moveCountPruning, skipQuiets, ttCapture;
+    bool captureOrPromotion, doFullDepthSearch, moveCountPruning, skipQuiets, ttCapture, goodCap;
     Piece moved_piece;
     int moveCount, quietCount;
 
@@ -848,6 +847,7 @@ moves_loop: // When in check search starts from here
                            &&  tte->depth() >= depth - 3 * ONE_PLY;
     skipQuiets = false;
     ttCapture = false;
+	goodCap = false;
 
     // Step 11. Loop through moves
     // Loop through all pseudo-legal moves until no moves remain or a beta cutoff occurs
@@ -966,8 +966,17 @@ moves_loop: // When in check search starts from here
           continue;
       }
 
-      if (move == ttMove && captureOrPromotion)
-          ttCapture = true;
+	  if (moveCount == 1 && captureOrPromotion)
+	  {
+		 
+		  if (move == ttMove)
+			  ttCapture = true;
+		  else
+			  if (to_sq(move) == to_sq((ss - 1)->currentMove))
+				  goodCap = true;
+
+	  }
+          
 
       // Update the current move (this must be done after singular extension search)
       ss->currentMove = move;
@@ -991,6 +1000,8 @@ moves_loop: // When in check search starts from here
               // Increase reduction if ttMove is a capture
               if (ttCapture)
                   r += ONE_PLY;
+			  else if(goodCap && !inCheck && !givesCheck)
+				  r += ONE_PLY;
 
               // Increase reduction for cut nodes
               if (cutNode)
