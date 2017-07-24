@@ -53,6 +53,12 @@ static const int PawnSet[] = {
     24, -32, 107, -51, 117, -9, -126, -21, 31
 };
 
+// QueenMinorsImbalance[opp_minor_count] is applied when only one side has a queen.
+// It contains a bonus/malus for the side with the queen.
+static const int QueenMinorsImbalance[6] = {
+  31, -8, -15, -25, -5, 0
+};
+
 // Helper used to detect a given material distribution.
 static int is_KXK(const Pos *pos, int us)
 {
@@ -96,6 +102,10 @@ int imbalance(int us, int pieceCount[][8])
 
     bonus += pc_us[pt1] * v;
   }
+
+  // Special handling of Queen vs. Minors
+  if  (pieceCount[us][QUEEN] == 1 && pieceCount[us ^ 1][QUEEN] == 0)
+  bonus += QueenMinorsImbalance[pieceCount[us ^ 1][KNIGHT] + pieceCount[us ^ 1][BISHOP]];
 
   return bonus;
 }

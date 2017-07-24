@@ -124,6 +124,7 @@ static void easy_move_update(Pos *pos, Move *newPv)
 }
 
 static Value DrawValue[2];
+int variety;
 //static CounterMoveHistoryStats CounterMoveHistory;
 
 static Value search_PV(Pos *pos, Stack *ss, Value alpha, Value beta, Depth depth);
@@ -244,6 +245,7 @@ void mainthread_search(void)
   Pos *pos = Threads.pos[0];
   int us = pos_stm();
   time_init(us, pos_game_ply());
+  variety = option_value(OPT_VARIETY);
   char buf[16];
 
   int contempt = option_value(OPT_CONTEMPT) * PawnValueEg / 100; // From centipawns
@@ -346,7 +348,7 @@ void thread_search(Pos *pos)
     ss[i].skipEarlyPruning = 0;
   }
 
-  bestValue = delta1 = delta2 = alpha = -VALUE_INFINITE;
+ bestValue = delta1 = delta2 = alpha = -VALUE_INFINITE;
   beta = VALUE_INFINITE;
   pos->completedDepth = DEPTH_ZERO;
 
@@ -412,10 +414,11 @@ if(option_value(OPT_TACTICALMODE)) multiPV=256;
 
       // Reset aspiration window starting size
       if (pos->rootDepth >= 5 * ONE_PLY) {
-		delta1 = (rm->move[PVIdx].previousScore < 0) ? (Value)((int)(8.0 + 0.1 * abs(rm->move[PVIdx].previousScore))) : (Value)18;
-		delta2 = (rm->move[PVIdx].previousScore > 0) ? (Value)((int)(8.0 + 0.1 * abs(rm->move[PVIdx].previousScore))) : (Value)18;       
-        alpha = max(rm->move[PVIdx].previousScore - delta1,-VALUE_INFINITE);
-        beta  = min(rm->move[PVIdx].previousScore + delta2, VALUE_INFINITE);
+        Value prevScore = rm->move[PVIdx].previousScore;
+        delta1 = (prevScore < 0) ? (Value)((int)(8.0 + 0.1 * abs(prevScore))) : (Value)18;
+        delta2 = (prevScore > 0) ? (Value)((int)(8.0 + 0.1 * abs(prevScore))) : (Value)18;
+        alpha = max(prevScore - delta1,-VALUE_INFINITE);
+        beta  = min(prevScore + delta2, VALUE_INFINITE);
       }
 
       // Start with a small aspiration window and, in the case of a fail
@@ -454,7 +457,7 @@ if(option_value(OPT_TACTICALMODE)) multiPV=256;
         // re-search, otherwise exit the loop.
         if (bestValue <= alpha) {
           beta = (alpha + beta) / 2;
-		  alpha = max(bestValue - delta1, -VALUE_INFINITE);
+          alpha = max(bestValue - delta1, -VALUE_INFINITE);
 
           if (pos->thread_idx == 0) {
             mainThread.failedLow = 1;
@@ -467,7 +470,7 @@ if(option_value(OPT_TACTICALMODE)) multiPV=256;
           break;
 
         delta1 += delta1 / 4 + 5;
-		delta2 += delta2 / 4 + 5;
+        delta2 += delta2 / 4 + 5;
 
         assert(alpha >= -VALUE_INFINITE && beta <= VALUE_INFINITE);
       }
