@@ -21,7 +21,7 @@
 #include <algorithm>
 #include <cassert>
 #include <ostream>
-
+#include <iostream>
 #include "misc.h"
 #include "search.h"
 #include "thread.h"
@@ -31,6 +31,7 @@
 #include "tzbook.h"
 
 using std::string;
+using namespace std;
 
 UCI::OptionsMap Options; // Global object
 
@@ -44,6 +45,9 @@ void on_threads(const Option&) { Threads.read_uci_options(); }
 void on_tb_path(const Option& o) { Tablebases::init(o); }
 void on_brainbook_path(const Option& o) { tzbook.init(o); }
 void on_book_move2_prob(const Option& o) { tzbook.set_book_move2_probability(o); }
+void on_HashFile(const Option& o) { TT.set_hash_file_name(o); }
+void SaveHashtoFile(const Option&) { TT.save(); }
+void LoadHashfromFile(const Option&) { TT.load(); }
 
 /// Our case insensitive less() function as required by UCI protocol
 bool CaseInsensitiveLess::operator() (const string& s1, const string& s2) const {
@@ -86,6 +90,10 @@ void init(OptionsMap& o) {
   o["SyzygyProbeDepth"]      << Option(1, 1, 100);
   o["Syzygy50MoveRule"]      << Option(true);
   o["SyzygyProbeLimit"]      << Option(6, 0, 6);
+  o["NeverClearHash"]		 << Option(false);
+  o["HashFile"]				 << Option("hash.hsh", on_HashFile);
+  o["SaveHashtoFile"]		 << Option(SaveHashtoFile);
+  o["LoadHashfromFile"]		 << Option(LoadHashfromFile);  
   o["Book Move2 Probability"]<< Option(0, 0, 100, on_book_move2_prob);
   o["BookPath"]              << Option("<empty>", on_brainbook_path);  
 }

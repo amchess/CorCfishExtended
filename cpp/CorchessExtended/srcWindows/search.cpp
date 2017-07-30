@@ -190,7 +190,8 @@ void Search::init() {
 /// Search::clear() resets search state to its initial value, to obtain reproducible results
 
 void Search::clear() {
-
+  if (Options["NeverClearHash"])
+	return;
   TT.clear();
 
   for (Thread* th : Threads)
@@ -246,8 +247,10 @@ void MainThread::search() {
 
   Color us = rootPos.side_to_move();
   Time.init(Limits, us, rootPos.game_ply());
-  variety = Options["Variety"];
-  TT.new_search();
+  if (!Limits.infinite)
+	TT.new_search();
+  else
+	TT.infinite_search();
 
   int contempt = Options["Contempt"] * PawnValueEg / 100; // From centipawns
   DrawValue[ us] = VALUE_DRAW - Value(contempt);
@@ -460,10 +463,7 @@ void Thread::search() {
                   }
               }
               else if (bestValue >= beta)
-              {
-                  alpha = (alpha + beta) / 2;
                   beta = std::min(bestValue + delta2, VALUE_INFINITE);
-              }
               else
                   break;
 
@@ -1103,8 +1103,8 @@ moves_loop: // When in check search starts from here
                   ++static_cast<MainThread*>(thisThread)->bestMoveChanges;
           }
           else
-              // All other moves but the PV are set to the lowest value: this is
-              // not a problem when sorting because the sort is stable and the
+              // All other moves but the PV are set to the lowest value: this
+              // is not a problem when sorting because the sort is stable and the
               // move position in the list is preserved - just the PV is pushed up.
               rm.score = -VALUE_INFINITE;
       }

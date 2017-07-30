@@ -463,11 +463,12 @@ if(option_value(OPT_TACTICALMODE)) multiPV=256;
             mainThread.failedLow = 1;
             Signals.stopOnPonderhit = 0;
           }
-        } else if (bestValue >= beta) {
-          alpha = (alpha + beta) / 2;
-          beta = min(bestValue + delta2, VALUE_INFINITE);
-        } else
-          break;
+        } 
+		else 
+			if (bestValue >= beta)
+				beta = min(bestValue + delta2, VALUE_INFINITE);
+			else
+				break;
 
         delta1 += delta1 / 4 + 5;
         delta2 += delta2 / 4 + 5;

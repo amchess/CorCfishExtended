@@ -5,11 +5,18 @@ Extended options:
 		- Tactical Mode
 		- Clean search
 		- Null Move
+		-Cerebellum book (only cpp version)
 	* Advanced features to experiment with
 		-Razoring
 		-Futility
 		-Pruning
 		-Probcut
+		-Saving Hash capability:
+			*NeverClearHash 
+			*HashFile 
+			*SaveHashtoFile 
+			*LoadHashfromFile		
+  
 		
-Thanks to Marco Zerbinati, ChessMan3, Ivan Ivic and the rest of Stockfish community
+Thanks to Marco Zerbinati, ChessMan3, Ivan Ivic, Daniel Jose and the rest of Stockfish community
 	

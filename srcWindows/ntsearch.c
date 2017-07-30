@@ -28,7 +28,7 @@ Value search_NonPV(Pos *pos, Stack *ss, Value alpha, Depth depth, int cutNode)
   Depth extension, newDepth;
   Value bestValue, value, ttValue, eval;
   int ttHit, inCheck, givesCheck, singularExtensionNode, improving;
-  int captureOrPromotion, doFullDepthSearch, moveCountPruning, skipQuiets, ttCapture;
+  int captureOrPromotion, doFullDepthSearch, moveCountPruning, skipQuiets, ttCapture, goodCap;
   Piece moved_piece;
   int moveCount, quietCount;
 
@@ -213,11 +213,15 @@ Value search_NonPV(Pos *pos, Stack *ss, Value alpha, Depth depth, int cutNode)
     return eval; // - futility_margin(depth); (do not do the right thing)
 
   // Step 8. Null move search with verification search (is omitted in PV nodes)
-  if ( option_value(OPT_NULLMOVE) && !PvNode
-      &&  eval >= beta
+	ExtMove list[MAX_MOVES];
+	ExtMove *last = generate_legal(pos, list);
+	int size=(int)(last-list+1);
+	if ( option_value(OPT_NULLMOVE) && !PvNode 
+      &&  eval >= beta 
       && (ss->staticEval >= beta - (int)(320 * log(depth / ONE_PLY)) + 500)
-      &&  pos->maxPly + 3 * ONE_PLY > pos->rootDepth
-      &&  pos_non_pawn_material(pos_stm()) > (depth > 12 * ONE_PLY) * BishopValueMg) {
+      &&  pos->maxPly + 5 > pos->rootDepth / ONE_PLY
+      && !(depth > 12 * ONE_PLY && size < 4)
+	  &&  pos_non_pawn_material(pos_stm()) > (depth > 12 * ONE_PLY) *  BishopValueMg) { 
 
     ss->currentMove = MOVE_NULL;
     ss->counterMoves = NULL;
@@ -320,7 +324,8 @@ moves_loop: // When in check search starts from here.
                          &&  tte_depth(tte) >= depth - 3 * ONE_PLY;
    skipQuiets = 0;
    ttCapture = 0;   
-
+   goodCap = 0;
+   
   // Step 11. Loop through moves
   // Loop through all pseudo-legal moves until no moves remain or a beta cutoff occurs
    while ((move = next_move(pos, skipQuiets))) {
@@ -465,8 +470,15 @@ moves_loop: // When in check search starts from here.
       continue;
     }
 	
-    if (moveCount == 1 && captureOrPromotion && ttMove)
-        ttCapture = 1;
+    if (moveCount == 1 && captureOrPromotion)
+	{
+		if(move == ttMove)
+			ttCapture = 1;
+		else
+			if (to_sq(move) == to_sq((ss - 1)->currentMove))
+				goodCap = 1;			
+	}
+        
 
     // Update the current move (this must be done after singular extension search)
     ss->currentMove = move;
@@ -489,7 +501,8 @@ moves_loop: // When in check search starts from here.
         // Increase reduction if ttMove is a capture
         if (ttCapture)
             r += ONE_PLY;
-		
+	    else if(goodCap && !inCheck && !givesCheck)
+			r += ONE_PLY;		
         // Increase reduction for cut nodes.
         if (cutNode)
           r += 2 * ONE_PLY;
