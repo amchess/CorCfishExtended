@@ -2,7 +2,7 @@ Contempt=6 (not default) very good for particular openings: Scandinavian Defense
 
 Extended options:
 	* For Deep Analysis
-		- Tactical Mode
+		- Correspondence Mode
 		- Clean search
 		- Null Move
 		-Cerebellum book (only cpp version)

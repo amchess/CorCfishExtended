@@ -24,9 +24,9 @@
 #ifndef USE_POPCNT
 uint8_t PopCnt16[1 << 16];
 #endif
-int SquareDistance[64][64];
+uint8_t SquareDistance[64][64];
 
-static int RookDeltas[] = { DELTA_N,  DELTA_E,  DELTA_S,  DELTA_W };
+static int RookDeltas[] = { DELTA_N,  DELTA_E,  DELTA_S,  DELTA_W  };
 static int BishopDeltas[] = { DELTA_NE, DELTA_SE, DELTA_SW, DELTA_NW };
 
 static Bitboard sliding_attack(int deltas[], Square sq, Bitboard occupied)
@@ -49,6 +49,8 @@ static Bitboard sliding_attack(int deltas[], Square sq, Bitboard occupied)
 #include "magic-fancy.c"
 #elif defined(MAGIC_PLAIN)
 #include "magic-plain.c"
+#elif defined(MAGIC_BLACK)
+#include "magic-black.c"
 #elif defined(BMI2_FANCY)
 #include "bmi2-fancy.c"
 #elif defined(BMI2_PLAIN)
@@ -59,11 +61,11 @@ Bitboard SquareBB[64];
 Bitboard FileBB[8];
 Bitboard RankBB[8];
 Bitboard AdjacentFilesBB[8];
-Bitboard InFrontBB[2][8];
+Bitboard ForwardRanksBB[2][8];
 Bitboard BetweenBB[64][64];
 Bitboard LineBB[64][64];
 Bitboard DistanceRingBB[64][8];
-Bitboard ForwardBB[2][64];
+Bitboard ForwardFileBB[2][64];
 Bitboard PassedPawnMask[2][64];
 Bitboard PawnAttackSpan[2][64];
 Bitboard PseudoAttacks[8][64];
@@ -201,13 +203,13 @@ void bitboards_init()
     AdjacentFilesBB[f] = (f > FILE_A ? FileBB[f - 1] : 0) | (f < FILE_H ? FileBB[f + 1] : 0);
 
   for (int r = 0; r < 7; r++)
-    InFrontBB[WHITE][r] = ~(InFrontBB[BLACK][r + 1] = InFrontBB[BLACK][r] | RankBB[r]);
+    ForwardRanksBB[WHITE][r] = ~(ForwardRanksBB[BLACK][r + 1] = ForwardRanksBB[BLACK][r] | RankBB[r]);
 
   for (int c = 0; c < 2; c++)
     for (Square s = 0; s < 64; s++) {
-      ForwardBB[c][s]      = InFrontBB[c][rank_of(s)] & FileBB[file_of(s)];
-      PawnAttackSpan[c][s] = InFrontBB[c][rank_of(s)] & AdjacentFilesBB[file_of(s)];
-      PassedPawnMask[c][s] = ForwardBB[c][s] | PawnAttackSpan[c][s];
+      ForwardFileBB[c][s]  = ForwardRanksBB[c][rank_of(s)] & FileBB[file_of(s)];
+      PawnAttackSpan[c][s] = ForwardRanksBB[c][rank_of(s)] & AdjacentFilesBB[file_of(s)];
+      PassedPawnMask[c][s] = ForwardFileBB[c][s] | PawnAttackSpan[c][s];
     }
 
   for (Square s1 = 0; s1 < 64; s1++)
@@ -223,20 +225,21 @@ void bitboards_init()
                        | ((sq_bb(s) << 1) & ~FileABB);
 #endif
 
-  int steps[][5] = { {0}, { 7, 9 }, { 6, 10, 15, 17 }, {0}, {0}, {0}, { 1, 7, 8, 9 } };
+  int steps[][5] = {
+    {0}, { 7, 9 }, { 6, 10, 15, 17 }, {0}, {0}, {0}, { 1, 7, 8, 9 }
+  };
 
   for (int c = 0; c < 2; c++)
     for (int pt = PAWN; pt <= KING; pt++)
-      for (int s = SQ_A1; s < 64; s++)
+      for (int s = 0; s < 64; s++)
         for (int i = 0; steps[pt][i]; i++) {
           Square to = s + (Square)(c == WHITE ? steps[pt][i] : -steps[pt][i]);
 
-          if (square_is_ok(to) && distance(s, to) < 3)
-          {
-              if (pt == PAWN)
-                  PawnAttacks[c][s] |= sq_bb(to);
-              else
-                  PseudoAttacks[pt][s] |= sq_bb(to);
+          if (square_is_ok(to) && distance(s, to) < 3) {
+            if (pt == PAWN)
+              PawnAttacks[c][s] |= sq_bb(to);
+            else
+              PseudoAttacks[pt][s] |= sq_bb(to);
           }
         }
 

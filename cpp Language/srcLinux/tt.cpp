@@ -85,7 +85,6 @@ void TranspositionTable::load() {
 	file.seekg(0, std::ios::beg);
 	file.read(reinterpret_cast<char *>(table), clusterCount * sizeof(Cluster));
 }
-
 /// TranspositionTable::probe() looks up the current position in the transposition
 /// table. It returns true and a pointer to the TTEntry if the position is found.
 /// Otherwise, it returns false and a pointer to an empty or least valuable TTEntry

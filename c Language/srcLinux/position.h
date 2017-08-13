@@ -2,7 +2,7 @@
   Stockfish, a UCI chess playing engine derived from Glaurung 2.1
   Copyright (C) 2004-2008 Tord Romstad (Glaurung author)
   Copyright (C) 2008-2015 Marco Costalba, Joona Kiiski, Tord Romstad
-  Copyright (C) 2015-2016 Marco Costalba, Joona Kiiski, Gary Linscott, Tord Romstad
+  Copyright (C) 2015-2017 Marco Costalba, Joona Kiiski, Gary Linscott, Tord Romstad
 
   Stockfish is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -78,14 +78,14 @@ struct Stack {
 
   // Original search stack data
   Move* pv;
-  CounterMoveStats *counterMoves;
+  PieceToHistory *history;
   uint8_t ply;
   uint8_t skipEarlyPruning;
   Move currentMove;
   Move excludedMove;
   Move killers[2];
   Value staticEval;
-  int history;
+  Value statScore;
   int moveCount;
 
   // MovePicker data
@@ -93,6 +93,7 @@ struct Stack {
   Depth depth;
   Move ttMove;
   Value threshold;
+  Move mp_killers[2];
   uint8_t stage;
   uint8_t recaptureSquare;
   ExtMove *cur, *endMoves, *endBadCaptures;
@@ -140,6 +141,7 @@ struct Pos {
   uint8_t castlingRookSquare[16];
   Bitboard castlingPath[16];
 #endif
+  Key rootKeyFlip;
   uint16_t gamePly;
 
   ExtMove *moveList;
@@ -150,16 +152,17 @@ struct Pos {
   uint64_t nodes;
   uint64_t tb_hits;
   int PVIdx, PVLast;
+  int selDepth;
   int maxPly;
   Depth rootDepth;
   Depth completedDepth;
 
   // Pointers to thread-specific tables.
-  HistoryStats *history;
-  MoveStats *counterMoves;
+  CounterMoveStat *counterMoves;
+  ButterflyHistory *history;
   PawnEntry *pawnTable;
   MaterialEntry *materialTable;
-  CounterMoveHistoryStats *counterMoveHistory;
+  CounterMoveHistoryStat *counterMoveHistory;
 
   // Thread-control data.
   atomic_bool resetCalls;
@@ -200,7 +203,6 @@ PURE Value see_sign(const Pos *pos, Move m);
 PURE Value see_test(const Pos *pos, Move m, int value);
 
 PURE Key key_after(const Pos *pos, Move m);
-PURE int game_phase(const Pos *pos);
 PURE int is_draw(const Pos *pos);
 
 // Position representation
@@ -253,7 +255,7 @@ PURE int is_draw(const Pos *pos);
 #define attacks_from_rook(s) attacks_bb_rook(s, pieces())
 #define attacks_from_queen(s) (attacks_from_bishop(s)|attacks_from_rook(s))
 #define attacks_from_king(s) (PseudoAttacks[KING][s])
-#define attacks_from(pt,s) attacks_bb(pt,s,pieces())
+#define attacks_from(pc,s) attacks_bb(pc,s,pieces())
 
 // Properties of moves
 #define moved_piece(m) (piece_on(from_sq(m)))
@@ -298,12 +300,6 @@ INLINE int advanced_pawn_push(const Pos *pos, Move m)
 {
   return   type_of_p(moved_piece(m)) == PAWN
         && relative_rank_s(pos_stm(), from_sq(m)) > RANK_4;
-}
-
-INLINE int far_advanced_pawn_push(const Pos *pos, Move m)
-{
-  return   type_of_p(moved_piece(m)) == PAWN
-        && relative_rank_s(pos_stm(), from_sq(m)) > RANK_6;
 }
 
 INLINE int opposite_bishops(const Pos *pos)

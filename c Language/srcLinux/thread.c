@@ -2,7 +2,7 @@
   Stockfish, a UCI chess playing engine derived from Glaurung 2.1
   Copyright (C) 2004-2008 Tord Romstad (Glaurung author)
   Copyright (C) 2008-2015 Marco Costalba, Joona Kiiski, Tord Romstad
-  Copyright (C) 2015-2016 Marco Costalba, Joona Kiiski, Gary Linscott, Tord Romstad
+  Copyright (C) 2015-2017 Marco Costalba, Joona Kiiski, Gary Linscott, Tord Romstad
 
   Stockfish is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -33,7 +33,7 @@
 // Global objects
 ThreadPool Threads;
 MainThread mainThread;
-CounterMoveHistoryStats **cmh_tables = NULL;
+CounterMoveHistoryStat **cmh_tables = NULL;
 int num_cmh_tables = 0;
 
 // thread_init() is where a search thread starts and initialises itself.
@@ -48,12 +48,12 @@ void thread_init(void *arg)
     int old = num_cmh_tables;
     num_cmh_tables = node + 16;
     cmh_tables = realloc(cmh_tables,
-                         num_cmh_tables * sizeof(CounterMoveHistoryStats *));
+                         num_cmh_tables * sizeof(CounterMoveHistoryStat *));
     while (old < num_cmh_tables)
       cmh_tables[old++] = NULL;
   }
   if (!cmh_tables[node]) {
-     cmh_tables[node] = calloc(sizeof(CounterMoveHistoryStats), 1);
+     cmh_tables[node] = calloc(sizeof(CounterMoveHistoryStat), 1);
   }
 
   Pos *pos;
@@ -61,8 +61,8 @@ void thread_init(void *arg)
  pos = calloc(sizeof(Pos), 1);
  pos->pawnTable = calloc(PAWN_ENTRIES * sizeof(PawnEntry), 1);
  pos->materialTable = calloc(8192 * sizeof(MaterialEntry), 1);
- pos->counterMoves = calloc(sizeof(MoveStats), 1);
- pos->history = calloc(sizeof(HistoryStats), 1);
+ pos->counterMoves = calloc(sizeof(CounterMoveStat), 1);
+ pos->history = calloc(sizeof(ButterflyHistory), 1);
  pos->rootMoves = calloc(sizeof(RootMoves), 1);
  pos->stack = calloc((MAX_PLY + 110) * sizeof(Stack), 1);
  pos->moveList = calloc(10000 * sizeof(ExtMove), 1);

@@ -122,7 +122,7 @@ const string engine_info(bool to_uci) {
   const string months("Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec");
   string month, day, year;
   stringstream ss, date(__DATE__); // From compiler, format is "Sep 21 2008"
-  
+
   unsigned int n = std::thread::hardware_concurrency();
   ss << "CorChessExtended 1.8 " << Version << setfill('0');
 

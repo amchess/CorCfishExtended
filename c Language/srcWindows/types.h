@@ -2,7 +2,7 @@
   Stockfish, a UCI chess playing engine derived from Glaurung 2.1
   Copyright (C) 2004-2008 Tord Romstad (Glaurung author)
   Copyright (C) 2008-2015 Marco Costalba, Joona Kiiski, Tord Romstad
-  Copyright (C) 2015-2016 Marco Costalba, Joona Kiiski, Gary Linscott, Tord Romstad
+  Copyright (C) 2015-2017 Marco Costalba, Joona Kiiski, Gary Linscott, Tord Romstad
 
   Stockfish is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -192,16 +192,16 @@ INLINE int make_castling_right(int c, int s)
 #define VALUE_MATE_IN_MAX_PLY  (VALUE_MATE - 2 * MAX_PLY)
 #define VALUE_MATED_IN_MAX_PLY (-VALUE_MATE + 2 * MAX_PLY)
 
-#define PawnValueMg    171
-#define PawnValueEg    240
-#define KnightValueMg  764
-#define KnightValueEg  848
-#define BishopValueMg  826
-#define BishopValueEg  891
-#define RookValueMg    1282
-#define RookValueEg    1373
-#define QueenValueMg   2526
-#define QueenValueEg   2646
+#define PawnValueMg   171
+#define PawnValueEg   240
+#define KnightValueMg 764
+#define KnightValueEg 848
+#define BishopValueMg 826
+#define BishopValueEg 891
+#define RookValueMg   1282
+#define RookValueEg   1373
+#define QueenValueMg  2526
+#define QueenValueEg  2646
 
 #define MidgameLimit 15258
 #define EndgameLimit 3915
@@ -394,6 +394,7 @@ extern uint32_t NonPawnPieceValue[16];
 #define pawn_push(c) ((c) == WHITE ? 8 : -8)
 #define from_sq(m) ((Square)((m)>>6) & 0x3f)
 #define to_sq(m) ((Square)((m) & 0x3f))
+#define from_to(m) ((m) & 0xfff)
 #define type_of_m(m) ((m) >> 14)
 #define promotion_type(m) ((((m)>>12) & 3) + KNIGHT)
 #define make_move(from,to) ((Move)((to) | ((from) << 6)))
@@ -414,10 +415,10 @@ typedef struct RootMoves RootMoves;
 typedef struct PawnEntry PawnEntry;
 typedef struct MaterialEntry MaterialEntry;
 
-typedef Move MoveStats[16][64];
-typedef Value CounterMoveStats[16][64];
-typedef CounterMoveStats CounterMoveHistoryStats[16][64];
-typedef Value HistoryStats[2][4096];
+typedef Move CounterMoveStat[16][64];
+typedef int PieceToHistory[16][64];
+typedef PieceToHistory CounterMoveHistoryStat[16][64];
+typedef int ButterflyHistory[2][4096];
 
 struct ExtMove {
   Move move;

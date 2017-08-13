@@ -713,9 +713,8 @@ T do_probe_table(const Position& pos, Entry* entry, WDLScore wdl, ProbeState* re
         assert(type_of(pc) == PAWN);
 
         leadPawns = b = pos.pieces(color_of(pc), PAWN);
-        do
+        while (b)
             squares[size++] = pop_lsb(&b) ^ flipSquares;
-        while (b);
 
         leadPawnsCnt = size;
 

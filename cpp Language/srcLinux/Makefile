@@ -35,10 +35,10 @@ PREFIX = /usr/local
 BINDIR = $(PREFIX)/bin
 
 ### Built-in benchmark for pgo-builds
-PGOBENCH = ./$(EXE) bench 16 1 1000 default time
+PGOBENCH = ./$(EXE) bench
 
 ### Object files
-OBJS = benchmark.o bitbase.o bitboard.o endgame.o evaluate.o main.o \
+OBJS = benchmark.o bitbase.o bitboard.o book.o endgame.o evaluate.o main.o \
 	material.o misc.o movegen.o movepick.o pawns.o position.o psqt.o \
 	search.o thread.o timeman.o tt.o uci.o ucioption.o tzbook.o syzygy/tbprobe.o
 
@@ -50,7 +50,9 @@ OBJS = benchmark.o bitbase.o bitboard.o endgame.o evaluate.o main.o \
 # ----------------------------------------------------------------------------
 #
 # debug = yes/no      --- -DNDEBUG         --- Enable/Disable debug mode
-# sanitize = yes/no   --- (-fsanitize )    --- enable undefined behavior checks
+# sanitize = undefined/thread/no (-fsanitize )
+#                     --- ( undefined )    --- enable undefined behavior checks
+#                     --- ( thread    )    --- enable threading error  checks
 # optimize = yes/no   --- (-O3/-fast etc.) --- Enable/Disable optimizations
 # arch = (name)       --- (-arch)          --- Target architecture
 # bits = 64/32        --- -DIS_64BIT       --- 64-/32-bit operating system
@@ -202,6 +204,9 @@ ifeq ($(COMP),clang)
 	comp=clang
 	CXX=clang++
 	CXXFLAGS += -pedantic -Wextra -Wshadow
+ifneq ($(KERNEL),Darwin)
+	LDFLAGS += -latomic
+endif
 
 	ifeq ($(ARCH),armv7)
 		ifeq ($(OS),Android)
@@ -261,9 +266,9 @@ else
 endif
 
 ### 3.2.2 Debugging with undefined behavior sanitizers
-ifeq ($(sanitize),yes)
-        CXXFLAGS += -g3 -fsanitize=undefined
-        LDFLAGS += -fsanitize=undefined
+ifneq ($(sanitize),no)
+        CXXFLAGS += -g3 -fsanitize=$(sanitize) -fuse-ld=gold
+        LDFLAGS += -fsanitize=$(sanitize) -fuse-ld=gold
 endif
 
 ### 3.3 Optimization
@@ -452,7 +457,7 @@ install:
 
 #clean all
 clean: objclean profileclean
-	@rm -f .depend *~ core 
+	@rm -f .depend *~ core
 
 # clean binaries and objects
 objclean:
@@ -466,7 +471,6 @@ profileclean:
 
 default:
 	help
-
 ### ==========================================================================
 ### Section 5. Private targets
 ### ==========================================================================
@@ -496,7 +500,7 @@ config-sanity:
 	@echo "Testing config sanity. If this fails, try 'make help' ..."
 	@echo ""
 	@test "$(debug)" = "yes" || test "$(debug)" = "no"
-	@test "$(sanitize)" = "yes" || test "$(sanitize)" = "no"
+	@test "$(sanitize)" = "undefined" || test "$(sanitize)" = "thread" || test "$(sanitize)" = "no"
 	@test "$(optimize)" = "yes" || test "$(optimize)" = "no"
 	@test "$(arch)" = "any" || test "$(arch)" = "x86_64" || test "$(arch)" = "i386" || \
 	 test "$(arch)" = "ppc64" || test "$(arch)" = "ppc" || test "$(arch)" = "armv7"

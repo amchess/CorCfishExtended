@@ -37,7 +37,7 @@ typedef void (*OnChange)(Option *);
 #define OPT_TYPE_STRING   3
 #define OPT_TYPE_DISABLED 4
 
-#define OPT_TACTICALMODE    0
+#define OPT_CORRESPONDENCEMODE    0
 #define OPT_CLEAN_SEARCH    1
 #define OPT_RAZORING        2
 #define OPT_FUTILITY        3

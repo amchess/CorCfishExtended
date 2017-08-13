@@ -100,22 +100,10 @@
 #define HasPext 0
 #endif
 
-#ifdef USE_AVX
-#define USE_AVX 1
-#else
-#define USE_AVX 0
-#endif
-
 #ifdef IS_64BIT
 #define Is64Bit 1
 #else
 #define Is64Bit 0
-#endif
-
-#ifdef USE_AVX2
-#define USE_AVX2 1
-#else
-#define USE_AVX2 0
 #endif
 
 #ifdef NUMA
@@ -192,16 +180,16 @@ INLINE int make_castling_right(int c, int s)
 #define VALUE_MATE_IN_MAX_PLY  (VALUE_MATE - 2 * MAX_PLY)
 #define VALUE_MATED_IN_MAX_PLY (-VALUE_MATE + 2 * MAX_PLY)
 
-#define PawnValueMg    171
-#define PawnValueEg    240
-#define KnightValueMg  764
-#define KnightValueEg  848
-#define BishopValueMg  826
-#define BishopValueEg  891
-#define RookValueMg    1282
-#define RookValueEg    1373
-#define QueenValueMg   2526
-#define QueenValueEg   2646
+#define PawnValueMg   171
+#define PawnValueEg   240
+#define KnightValueMg 764
+#define KnightValueEg 848
+#define BishopValueMg 826
+#define BishopValueEg 891
+#define RookValueMg   1282
+#define RookValueEg   1373
+#define QueenValueMg  2526
+#define QueenValueEg  2646
 
 #define MidgameLimit 15258
 #define EndgameLimit 3915
@@ -394,6 +382,7 @@ extern uint32_t NonPawnPieceValue[16];
 #define pawn_push(c) ((c) == WHITE ? 8 : -8)
 #define from_sq(m) ((Square)((m)>>6) & 0x3f)
 #define to_sq(m) ((Square)((m) & 0x3f))
+#define from_to(m) ((m) & 0xfff)
 #define type_of_m(m) ((m) >> 14)
 #define promotion_type(m) ((((m)>>12) & 3) + KNIGHT)
 #define make_move(from,to) ((Move)((to) | ((from) << 6)))
@@ -414,10 +403,10 @@ typedef struct RootMoves RootMoves;
 typedef struct PawnEntry PawnEntry;
 typedef struct MaterialEntry MaterialEntry;
 
-typedef Move MoveStats[16][64];
-typedef Value CounterMoveStats[16][64];
-typedef CounterMoveStats CounterMoveHistoryStats[16][64];
-typedef Value HistoryStats[2][4096];
+typedef Move CounterMoveStat[16][64];
+typedef int PieceToHistory[16][64];
+typedef PieceToHistory CounterMoveHistoryStat[16][64];
+typedef int ButterflyHistory[2][4096];
 
 struct ExtMove {
   Move move;

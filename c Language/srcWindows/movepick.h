@@ -2,7 +2,7 @@
   Stockfish, a UCI chess playing engine derived from Glaurung 2.1
   Copyright (C) 2004-2008 Tord Romstad (Glaurung author)
   Copyright (C) 2008-2015 Marco Costalba, Joona Kiiski, Tord Romstad
-  Copyright (C) 2015-2016 Marco Costalba, Joona Kiiski, Gary Linscott, Tord Romstad
+  Copyright (C) 2015-2017 Marco Costalba, Joona Kiiski, Gary Linscott, Tord Romstad
 
   Stockfish is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -30,32 +30,21 @@
 
 #define stats_clear(s) memset(s, 0, sizeof(*s))
 
-INLINE void hs_update(HistoryStats hs, int c, Move m, int v)
+INLINE void cms_update(PieceToHistory cms, Piece pc, Square to, int v)
 {
   int w = v >= 0 ? v : -v;
-  const int D = 324;
-  
-  assert(w <= D); // Consistency check for below formula
+
+  cms[pc][to] -= cms[pc][to] * w / 936;
+  cms[pc][to] += v * 32;
+}
+
+INLINE void history_update(ButterflyHistory history, int c, Move m, int v)
+{
+  int w = v >= 0 ? v : -v;
 
   m &= 4095;
-  hs[c][m] -= hs[c][m] * w / D;
-  hs[c][m] += v * 32;
-}
- 
-INLINE int hs_get(HistoryStats hs, int c, Move m)
-{
-  return hs[c][m & 4095];
-}
-
-INLINE void cms_update(CounterMoveStats cms, Piece pc, Square to, int v)
-{
-  int w = v >= 0 ? v : -v;
-  const int D = 936;
-  
-  assert(w <= D);
-
-  cms[pc][to] -= cms[pc][to] * w / D;
-  cms[pc][to] += v * 32;
+  history[c][m] -= history[c][m] * w / 324;
+  history[c][m] += v * 32;
 }
 
 #define ST_MAIN_SEARCH             0
@@ -100,6 +89,8 @@ INLINE void mp_init(const Pos *pos, Move ttm, Depth depth)
 
   Square prevSq = to_sq((st-1)->currentMove);
   st->countermove = (*pos->counterMoves)[piece_on(prevSq)][prevSq];
+  st->mp_killers[0] = st->killers[0];
+  st->mp_killers[1] = st->killers[1];
 
   st->stage = pos_checkers() ? ST_EVASIONS : ST_MAIN_SEARCH;
   st->ttMove = ttm;

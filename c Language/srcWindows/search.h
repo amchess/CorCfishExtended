@@ -28,9 +28,6 @@
 #include "thread.h"
 #include "types.h"
 
-typedef Value CounterMoveStats[16][64];
-typedef CounterMoveStats CounterMoveHistoryStats[16][64];
-
 // RootMove struct is used for moves at the root of the tree. For each root
 // move we store a score and a PV (really a refutation in the case of moves
 // which fail low). Score is normally set at -VALUE_INFINITE for all non-pv
@@ -40,6 +37,7 @@ struct RootMove {
   int pv_size;
   Value score;
   Value previousScore;
+  int selDepth;
   Value TBRank;
   Move pv[MAX_PLY];
 };

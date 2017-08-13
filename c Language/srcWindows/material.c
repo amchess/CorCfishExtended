@@ -48,15 +48,15 @@ static const int QuadraticTheirs[][8] = {
   { 101,  100, -37,   141,  268,    0 }  // Queen
 };
 
-// PawnSet[pawn count] contains a bonus/malus indexed by number of pawns
-static const int PawnSet[] = {
-    24, -32, 107, -51, 117, -9, -126, -21, 31
+// PawnSet[count] contains a bonus/malus indexed by number of pawns
+static const int PawnSet[9] = {
+  24, -32, 107, -51, 117, -9, -126, -21, 31
 };
 
-// QueenMinorsImbalance[opp_minor_count] is applied when only one side has a queen.
-// It contains a bonus/malus for the side with the queen.
-static const int QueenMinorsImbalance[6] = {
-  31, -8, -15, -25, -5, 0
+// QueenMinorsImbalance[opp_minor_count] is applied when only one side has
+// a queen. It contains a bonus/malus for the side with the queen.
+static const int QueenMinorsImbalance[13] = {
+  31, -8, -15, -25, -5
 };
 
 // Helper used to detect a given material distribution.
@@ -87,7 +87,7 @@ int imbalance(int us, int pieceCount[][8])
 {
   int *pc_us = pieceCount[us];
   int *pc_them = pieceCount[us ^ 1];
-  int bonus = PawnSet[pieceCount[us][PAWN]];
+  int bonus = PawnSet[pc_us[PAWN]];
 
   // Second-degree polynomial material imbalance by Tord Romstad
   for (int pt1 = 0; pt1 <= QUEEN; pt1++) {
@@ -103,9 +103,9 @@ int imbalance(int us, int pieceCount[][8])
     bonus += pc_us[pt1] * v;
   }
 
-  // Special handling of Queen vs. Minors
-  if  (pieceCount[us][QUEEN] == 1 && pieceCount[us ^ 1][QUEEN] == 0)
-  bonus += QueenMinorsImbalance[pieceCount[us ^ 1][KNIGHT] + pieceCount[us ^ 1][BISHOP]];
+  // Special handling of queen vs minors
+  if (pc_us[QUEEN] == 1 && pc_them[QUEEN] == 0)
+    bonus += QueenMinorsImbalance[pc_them[KNIGHT] + pc_them[BISHOP]];
 
   return bonus;
 }
@@ -123,7 +123,13 @@ void material_entry_fill(const Pos *pos, MaterialEntry *e, Key key)
   memset(e, 0, sizeof(MaterialEntry));
   e->key = key;
   e->factor[WHITE] = e->factor[BLACK] = (uint8_t)SCALE_FACTOR_NORMAL;
-  e->gamePhase = game_phase(pos);
+
+  Value npm = pos_non_pawn_material(WHITE) + pos_non_pawn_material(BLACK);
+  if (npm > MidgameLimit)
+      npm = MidgameLimit;
+  if (npm < EndgameLimit)
+      npm = EndgameLimit;
+  e->gamePhase = ((npm - EndgameLimit) * PHASE_MIDGAME) / (MidgameLimit - EndgameLimit);
 
   // Look for a specialized evaluation function.
   for (int i = 0; i < NUM_EVAL; i++)

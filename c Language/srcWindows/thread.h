@@ -30,7 +30,7 @@
 
 #include "types.h"
 
-#define MAX_THREADS 128
+#define MAX_THREADS 512
 
 #ifndef __WIN32__
 #define LOCK_T pthread_mutex_t
@@ -102,7 +102,7 @@ INLINE Pos *threads_main(void)
   return Threads.pos[0];
 }
 
-CounterMoveHistoryStats **cmh_tables;
+CounterMoveHistoryStat **cmh_tables;
 int num_cmh_tables;
 
 #endif

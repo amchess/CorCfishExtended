@@ -423,23 +423,6 @@ void pos_fen(const Pos *pos, char *str)
 }
 
 
-// game_phase() calculates the game phase interpolating total non-pawn
-// material between endgame and midgame limits.
-
-int game_phase(const Pos *pos)
-{
-  Value npm = pos_non_pawn_material(WHITE) + pos_non_pawn_material(BLACK);
-
-  if (npm > MidgameLimit)
-      npm = MidgameLimit;
-
-  if (npm < EndgameLimit)
-      npm = EndgameLimit;
-
-  return ((npm - EndgameLimit) * PHASE_MIDGAME) / (MidgameLimit - EndgameLimit);
-}
-
-
 // Turning slider_blockers() into an inline function was slower, even
 // though it should only add a single slightly optimised copy to evaluate().
 #if 1
@@ -585,7 +568,7 @@ int is_pseudo_legal_old(Pos *pos, Move m)
            && is_empty(to - pawn_push(us))))
       return 0;
   }
-  else if (!(attacks_from(type_of_p(pc), from) & sq_bb(to)))
+  else if (!(attacks_from(pc, from) & sq_bb(to)))
     return 0;
 
   // Evasions generator already takes care to avoid some kind of illegal moves
@@ -1063,7 +1046,7 @@ void do_move(Pos *pos, Move m, int givesCheck)
 
     // Update pawn hash key and prefetch access to pawnsTable
     st->pawnKey ^= zob.psq[piece][from] ^ zob.psq[piece][to];
-    prefetch(&pos->pawnTable[st->pawnKey & (PAWN_ENTRIES -1)]);
+    prefetch2(&pos->pawnTable[st->pawnKey & (PAWN_ENTRIES -1)]);
 
     // Reset ply counters.
     st->plyCounters = 0;

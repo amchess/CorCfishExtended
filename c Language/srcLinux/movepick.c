@@ -2,7 +2,7 @@
   Stockfish, a UCI chess playing engine derived from Glaurung 2.1
   Copyright (C) 2004-2008 Tord Romstad (Glaurung author)
   Copyright (C) 2008-2015 Marco Costalba, Joona Kiiski, Tord Romstad
-  Copyright (C) 2015-2016 Marco Costalba, Joona Kiiski, Gary Linscott, Tord Romstad
+  Copyright (C) 2015-2017 Marco Costalba, Joona Kiiski, Gary Linscott, Tord Romstad
 
   Stockfish is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -23,53 +23,22 @@
 #include "movepick.h"
 #include "thread.h"
 
-//#define HistoryStats_Max ((Value)(1<<28))
+// An insertion sort which sorts moves in descending order up to and
+// including a given limit. The order of moves smaller than the limit is
+// left unspecified.
 
-
-// partial_insertion_sort() sorts moves in descending order up to and including
-// a given limit. The order of moves smaller than the limit is left unspecified.
-
-INLINE void partial_insertion_sort(ExtMove *begin, ExtMove *end, int limit){
-
-  for (ExtMove *sortedEnd = begin, *p = begin + 1; p < end; p++) 
-       if (p->value >= limit)
-  {
-    ExtMove tmp = *p, *q;
-	*p = *++sortedEnd;
-    for (q = sortedEnd; q != begin && (q - 1)->value < tmp.value; --q)
-    *q = *(q - 1);
-    *q = tmp;
-  }
-}
-
-// Our non-stable partition function, the one that Stockfish uses.
-
-INLINE ExtMove *partition(ExtMove *first, ExtMove *last)
+INLINE void partial_insertion_sort(ExtMove *begin, ExtMove *end, int limit)
 {
-  ExtMove tmp;
-
-  while (1) {
-    while (1)
-      if (first == last)
-        return first;
-      else if (first->value > 0)
-        first++;
-      else
-        break;
-    last--;
-    while (1)
-      if (first == last)
-        return first;
-      else if (!(last->value > 0))
-        last--;
-      else
-        break;
-    tmp = *first;
-    *first = *last;
-    *last = tmp;
-    first++;
-  }
+  for (ExtMove *sortedEnd = begin, *p = begin + 1; p < end; p++)
+    if (p->value >= limit) {
+      ExtMove tmp = *p, *q;
+      *p = *++sortedEnd;
+      for (q = sortedEnd; q != begin && (q-1)->value < tmp.value; q--)
+        *q = *(q-1);
+      *q = tmp;
+    }
 }
+
 
 // pick_best() finds the best move in the range (begin, end).
 
@@ -99,23 +68,18 @@ static void score_captures(const Pos *pos)
 
   for (ExtMove *m = st->cur; m < st->endMoves; m++)
     m->value =  PieceValue[MG][piece_on(to_sq(m->move))]
-              - (Value)(200 * relative_rank_s(pos_stm(), to_sq(m->move)));
+              - (200 * relative_rank_s(pos_stm(), to_sq(m->move)));
 }
 
 SMALL
 static void score_quiets(const Pos *pos)
 {
   Stack *st = pos->st;
-  HistoryStats *history = pos->history;
+  ButterflyHistory *history = pos->history;
 
-  CounterMoveStats *cmh = (st-1)->counterMoves;
-  CounterMoveStats *fmh = (st-2)->counterMoves;
-  CounterMoveStats *fmh2 = (st-4)->counterMoves;
-
-  CounterMoveStats *tmp = &(*pos->counterMoveHistory)[0][0];
-  if (!cmh) cmh = tmp;
-  if (!fmh) fmh = tmp;
-  if (!fmh2) fmh2 = tmp;
+  PieceToHistory *cmh = (st-1)->history;
+  PieceToHistory *fmh = (st-2)->history;
+  PieceToHistory *fmh2 = (st-4)->history;
 
   uint32_t c = pos_stm();
 
@@ -126,26 +90,25 @@ static void score_quiets(const Pos *pos)
     m->value =  (*cmh)[piece_on(from)][to]
               + (*fmh)[piece_on(from)][to]
               + (*fmh2)[piece_on(from)][to]
-              + hs_get(*history, c, move);
+              + (*history)[c][move];
   }
 }
-
-static const int HistoryStats_Max = 1 << 28;
 
 static void score_evasions(const Pos *pos)
 {
   Stack *st = pos->st;
-  // Try captures ordered by MVV/LVA, then non-captures ordered by stats heuristics
+  // Try captures ordered by MVV/LVA, then non-captures ordered by
+  // stats heuristics.
 
-  HistoryStats *history = pos->history;
+  ButterflyHistory *history = pos->history;
   uint32_t c = pos_stm();
 
   for (ExtMove *m = st->cur; m < st->endMoves; m++)
     if (is_capture(pos, m->move))
       m->value =  PieceValue[MG][piece_on(to_sq(m->move))]
-                - (Value)type_of_p(moved_piece(m->move)) + HistoryStats_Max;
+                - type_of_p(moved_piece(m->move)) + (1 << 28);
     else
-       m->value =  hs_get(*history, c, m->move);
+      m->value = (*history)[c][from_to(m->move)];
 }
 
 
@@ -169,7 +132,7 @@ Move next_move(const Pos *pos, int skipQuiets)
     st->endMoves = generate_captures(pos, st->cur);
     score_captures(pos);
     st->stage++;
-	/* fallthrough */
+    /* fallthrough */
 
   case ST_GOOD_CAPTURES:
     while (st->cur < st->endMoves) {
@@ -185,28 +148,28 @@ Move next_move(const Pos *pos, int skipQuiets)
     st->stage++;
 
     // First killer move.
-    move = st->killers[0];
+    move = st->mp_killers[0];
     if (move && move != st->ttMove && is_pseudo_legal(pos, move)
              && !is_capture(pos, move))
       return move;
-	  /* fallthrough */
+    /* fallthrough */
 
   case ST_KILLERS:
     st->stage++;
-    move = st->killers[1]; // Second killer move.
+    move = st->mp_killers[1]; // Second killer move.
     if (move && move != st->ttMove && is_pseudo_legal(pos, move)
              && !is_capture(pos, move))
       return move;
-	  /* fallthrough */
+    /* fallthrough */
 
   case ST_KILLERS_2:
     st->stage++;
     move = st->countermove;
-    if (move && move != st->ttMove && move != st->killers[0]
-             && move != st->killers[1] && is_pseudo_legal(pos, move)
+    if (move && move != st->ttMove && move != st->mp_killers[0]
+             && move != st->mp_killers[1] && is_pseudo_legal(pos, move)
              && !is_capture(pos, move))
       return move;
-	  /* fallthrough */
+    /* fallthrough */
 
   case ST_QUIET_GEN:
     st->cur = st->endBadCaptures;
@@ -214,20 +177,19 @@ Move next_move(const Pos *pos, int skipQuiets)
     score_quiets(pos);
     partial_insertion_sort(st->cur, st->endMoves, -4000 * st->depth / ONE_PLY);
     st->stage++;
-	/* fallthrough */
+    /* fallthrough */
 
   case ST_QUIET:
-    while (    st->cur < st->endMoves 
- 	       && (!skipQuiets || st->cur->value >= VALUE_ZERO))
- 	{ 
- 	 move = (st->cur++)->move;
- 	 if (   move != st->ttMove && move != st->killers[0]
-         && move != st->killers[1]  && move != st->countermove)
-          return move;
- 	}
+    while (    st->cur < st->endMoves
+           && (!skipQuiets || st->cur->value >= 0)) {
+      move = (st->cur++)->move;
+      if (   move != st->ttMove && move != st->mp_killers[0]
+          && move != st->mp_killers[1] && move != st->countermove)
+        return move;
+    }
     st->stage++;
-    st->cur = (st-1)->endMoves; // Point to beginning of bad captures
-	/* fallthrough */
+    st->cur = (st-1)->endMoves; // Return to bad captures.
+    /* fallthrough */
 
   case ST_BAD_CAPTURES:
     if (st->cur < st->endBadCaptures)
@@ -241,12 +203,14 @@ Move next_move(const Pos *pos, int skipQuiets)
     st->stage = ST_REMAINING;
 
     if (st->stage != ST_REMAINING) {
+    /* fallthrough */
   case ST_QCAPTURES_CHECKS_GEN: case ST_QCAPTURES_NO_CHECKS_GEN:
       st->cur = (st-1)->endMoves;
       st->endMoves = generate_captures(pos, st->cur);
       score_captures(pos);
       st->stage++;
     }
+    /* fallthrough */
 
   case ST_QCAPTURES_CHECKS: case ST_REMAINING:
     while (st->cur < st->endMoves) {
@@ -259,6 +223,7 @@ Move next_move(const Pos *pos, int skipQuiets)
     st->cur = (st-1)->endMoves;
     st->endMoves = generate_quiet_checks(pos, st->cur);
     st->stage++;
+    /* fallthrough */
 
   case ST_CHECKS:
     while (st->cur < st->endMoves) {
@@ -273,6 +238,7 @@ Move next_move(const Pos *pos, int skipQuiets)
     st->endMoves = generate_captures(pos, st->cur);
     score_captures(pos);
     st->stage++;
+    /* fallthrough */
 
   case ST_RECAPTURES:
     while (st->cur < st->endMoves) {
@@ -287,6 +253,7 @@ Move next_move(const Pos *pos, int skipQuiets)
     st->endMoves = generate_captures(pos, st->cur);
     score_captures(pos);
     st->stage++;
+    /* fallthrough */
 
   case ST_PROBCUT_2:
     while (st->cur < st->endMoves) {

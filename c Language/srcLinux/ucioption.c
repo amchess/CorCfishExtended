@@ -82,7 +82,7 @@ static void on_largepages(Option *opt)
 #endif
 
 static Option options_map[] = {
-  { "Tactical Mode", OPT_TYPE_CHECK, 0, 0, 0, NULL, NULL, 0, NULL },
+  { "Correspondence Mode", OPT_TYPE_CHECK, 0, 0, 0, NULL, NULL, 0, NULL },
   { "Clean Search", OPT_TYPE_CHECK, 0, 0, 0, NULL, NULL, 0, NULL },
   { "Razoring", OPT_TYPE_CHECK, 1, 0, 0, NULL, NULL, 0, NULL },
   { "Futility", OPT_TYPE_CHECK, 1, 0, 0, NULL, NULL, 0, NULL },
