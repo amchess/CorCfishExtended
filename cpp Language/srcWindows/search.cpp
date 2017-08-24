@@ -194,6 +194,7 @@ void Search::clear() {
   if (Options["NeverClearHash"])
 	return;
   Threads.main()->wait_for_search_finished();
+
   Time.availableNodes = 0;
   TT.clear();
 
@@ -269,7 +270,7 @@ void MainThread::search() {
 
   if (rootMoves.empty())
   {
-      rootMoves.push_back(RootMove(MOVE_NONE));
+      rootMoves.emplace_back(MOVE_NONE);
       sync_cout << "info depth 0 score "
                 << UCI::value(rootPos.checkers() ? -VALUE_MATE : VALUE_DRAW)
                 << sync_endl;
@@ -312,8 +313,7 @@ void MainThread::search() {
   // the available ones before exiting.
   if (Limits.npmsec)
       Time.availableNodes += Limits.inc[us] - Threads.nodes_searched();
-
-finalize:
+  finalize:
   // When we reach the maximum depth, we can arrive here without a raise of
   // Threads.stop. However, if we are pondering or in an infinite search,
   // the UCI protocol states that we shouldn't print the best move before the
@@ -383,7 +383,6 @@ void Thread::search() {
 
   bestValue = delta1 = delta2 = alpha = -VALUE_INFINITE;
   beta = VALUE_INFINITE;
-  completedDepth = DEPTH_ZERO;
 
   if (mainThread)
   {
@@ -1060,9 +1059,6 @@ moves_loop: // When in check search starts from here
           }
 
 		  
-          // Set maximum reduction
-          r = std::min(r, maxLMR);
-
           // The "correspondenceMode Mode" option looks Engine to look at more positions per search depth, but Engine will play
           // weaker overall.  It also sets the "MultiPV" option to 256 to allow Engine to look at more nodes per
           // depth and may help in analysis.
@@ -1568,7 +1564,7 @@ moves_loop: // When in check search starts from here
     if (Threads.ponder)
         return;
 
-    if (   (Limits.use_time_management() && elapsed > Time.maximum() - 10)
+    if (   (Limits.use_time_management() && elapsed > Time.maximum())
         || (Limits.movetime && elapsed >= Limits.movetime)
         || (Limits.nodes && Threads.nodes_searched() >= (uint64_t)Limits.nodes))
             Threads.stop = true;

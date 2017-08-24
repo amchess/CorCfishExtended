@@ -50,7 +50,9 @@ OBJS = benchmark.o bitbase.o bitboard.o book.o endgame.o evaluate.o main.o \
 # ----------------------------------------------------------------------------
 #
 # debug = yes/no      --- -DNDEBUG         --- Enable/Disable debug mode
-# sanitize = yes/no   --- (-fsanitize )    --- enable undefined behavior checks
+# sanitize = undefined/thread/no (-fsanitize )
+#                     --- ( undefined )    --- enable undefined behavior checks
+#                     --- ( thread    )    --- enable threading error  checks
 # optimize = yes/no   --- (-O3/-fast etc.) --- Enable/Disable optimizations
 # arch = (name)       --- (-arch)          --- Target architecture
 # bits = 64/32        --- -DIS_64BIT       --- 64-/32-bit operating system
@@ -58,7 +60,6 @@ OBJS = benchmark.o bitbase.o bitboard.o book.o endgame.o evaluate.o main.o \
 # popcnt = yes/no     --- -DUSE_POPCNT     --- Use popcnt asm-instruction
 # sse = yes/no        --- -msse            --- Use Intel Streaming SIMD Extensions
 # pext = yes/no       --- -DUSE_PEXT       --- Use pext x86_64 asm-instruction
-# native = yes/no     --- -march=native    --- Optimize for local CPU
 #
 # Note that Makefile is space sensitive, so when adding new architectures
 # or modifying existing flags, you have to make sure there are no extra spaces

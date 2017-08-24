@@ -46,7 +46,7 @@ int main(int argc, char* argv[]) {
   Pawns::init();
   Tablebases::init(Options["SyzygyPath"]);
   TT.resize(Options["Hash"]);
-  Threads.init();
+  Threads.init(Options["Threads"]);
   tzbook.init(Options["BookPath"]);
   Search::clear(); // After threads are up
 

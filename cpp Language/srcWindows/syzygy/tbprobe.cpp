@@ -489,8 +489,8 @@ void HashTable::insert(const std::vector<PieceType>& pieces) {
 
     MaxCardinality = std::max((int)pieces.size(), MaxCardinality);
 
-    wdlTable.push_back(WDLEntry(code));
-    dtzTable.push_back(DTZEntry(wdlTable.back()));
+    wdlTable.emplace_back(code);
+    dtzTable.emplace_back(wdlTable.back());
 
     insert(wdlTable.back().key , &wdlTable.back(), &dtzTable.back());
     insert(wdlTable.back().key2, &wdlTable.back(), &dtzTable.back());
@@ -713,8 +713,9 @@ T do_probe_table(const Position& pos, Entry* entry, WDLScore wdl, ProbeState* re
         assert(type_of(pc) == PAWN);
 
         leadPawns = b = pos.pieces(color_of(pc), PAWN);
-        while (b)
+        do
             squares[size++] = pop_lsb(&b) ^ flipSquares;
+        while (b);
 
         leadPawnsCnt = size;
 
