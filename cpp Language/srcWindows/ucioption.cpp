@@ -74,7 +74,7 @@ void init(OptionsMap& o) {
   o["Contempt"]                << Option(0, -100, 100);
   o["OwnBook"]                 << Option(false);
   o["Threads"]                 << Option(n, 1, 512, on_threads);
-  o["Hash"]                    << Option(16, 1, MaxHashMB, on_hash_size);
+  o["Hash"]                    << Option(128, 1, MaxHashMB, on_hash_size);
   o["Clear Hash"]              << Option(on_clear_hash);
   o["Ponder"]                  << Option(false);
   o["MultiPV"]                 << Option(1, 1, 500);
@@ -85,7 +85,7 @@ void init(OptionsMap& o) {
   o["LoadHashfromFile"]		   << Option(LoadHashfromFile);
   o["Best Book Move"]          << Option(false);
   o["Book File"]               << Option("book.bin");
-  o["Move Overhead"]           << Option(30, 0, 5000);
+  o["Move Overhead"]           << Option(100, 0, 5000);
   o["nodestime"]               << Option(0, 0, 10000);
   o["UCI_Chess960"]            << Option(false);
   o["Large Pages"]             << Option(true, on_large_pages);

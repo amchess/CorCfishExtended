@@ -143,6 +143,7 @@ struct Pos {
 #endif
   Key rootKeyFlip;
   uint16_t gamePly;
+  uint8_t hasRepeated;
 
   ExtMove *moveList;
 
@@ -153,7 +154,6 @@ struct Pos {
   uint64_t tb_hits;
   int PVIdx, PVLast;
   int selDepth;
-  int maxPly;
   Depth rootDepth;
   Depth completedDepth;
 

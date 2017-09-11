@@ -84,7 +84,7 @@ void init(OptionsMap& o) {
   o["LoadHashfromFile"]		   << Option(LoadHashfromFile);
   o["Best Book Move"]          << Option(false);
   o["Book File"]               << Option("book.bin");
-  o["Move Overhead"]           << Option(30, 0, 5000);
+  o["Move Overhead"]           << Option(100, 0, 5000);
   o["nodestime"]               << Option(0, 0, 10000);
   o["UCI_Chess960"]            << Option(false);
   o["SyzygyPath"]              << Option("<empty>", on_tb_path);

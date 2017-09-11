@@ -26,9 +26,9 @@ Value search_NonPV(Pos *pos, Stack *ss, Value alpha, Depth depth, int cutNode)
   Key posKey;
   Move ttMove, move, excludedMove, bestMove;
   Depth extension, newDepth;
-  Value bestValue, value, ttValue, eval;
+  Value bestValue, value, ttValue, eval, maxValue;
   int ttHit, inCheck, givesCheck, singularExtensionNode, improving;
-  int captureOrPromotion, doFullDepthSearch, moveCountPruning, skipQuiets, goodCap;
+  int captureOrPromotion, doFullDepthSearch, moveCountPruning, skipQuiets;
   int ttCapture;
   Piece movedPiece;
   int moveCount, quietCount;
@@ -38,6 +38,7 @@ Value search_NonPV(Pos *pos, Stack *ss, Value alpha, Depth depth, int cutNode)
   moveCount = quietCount =  ss->moveCount = 0;
   ss->statScore = 0;
   bestValue = -VALUE_INFINITE;
+  maxValue = VALUE_INFINITE;
 
   // Check for the available remaining time
   if (load_rlx(pos->resetCalls)) {
@@ -105,7 +106,8 @@ Value search_NonPV(Pos *pos, Stack *ss, Value alpha, Depth depth, int cutNode)
       && tte_depth(tte) >= depth
       && ttValue != VALUE_NONE // Possible in case of TT access race.
       && (ttValue >= beta ? (tte_bound(tte) & BOUND_LOWER)
-                          : (tte_bound(tte) & BOUND_UPPER))) {
+                          : (tte_bound(tte) & BOUND_UPPER)))
+  {
     // If ttMove is quiet, update move sorting heuristics on TT hit.
     if (ttMove) {
       if (ttValue >= beta) {
@@ -148,11 +150,26 @@ Value search_NonPV(Pos *pos, Stack *ss, Value alpha, Depth depth, int cutNode)
                : v >  drawScore ?  VALUE_MATE - MAX_PLY - ss->ply
                                 :  VALUE_DRAW + 2 * v * drawScore;
 
-        tte_save(tte, posKey, value_to_tt(value, ss->ply), BOUND_EXACT,
+        int b =  v < -drawScore ? BOUND_UPPER
+               : v >  drawScore ? BOUND_LOWER : BOUND_EXACT;
+
+        if (    b == BOUND_EXACT
+            || (b == BOUND_LOWER ? value >= beta : value <= alpha))
+        {
+          tte_save(tte, posKey, value_to_tt(value, ss->ply), b,
                  min(DEPTH_MAX - ONE_PLY, depth + 6 * ONE_PLY),
                  0, VALUE_NONE, tt_generation());
+          return value;
+        }
 
-        return value;
+        if (PvNode) {
+          if (b == BOUND_LOWER) {
+            bestValue = value;
+            if (bestValue > alpha)
+              alpha = bestValue;
+          } else
+            maxValue = value;
+        }
       }
     }
   }
@@ -211,7 +228,7 @@ Value search_NonPV(Pos *pos, Stack *ss, Value alpha, Depth depth, int cutNode)
 	if ( option_value(OPT_NULLMOVE) && !PvNode 
       &&  eval >= beta 
       && (ss->staticEval >= beta - (int)(320 * log(depth / ONE_PLY)) + 500)
-      &&  pos->maxPly + 5 > pos->rootDepth / ONE_PLY
+      &&  pos->selDepth + 5 > pos->rootDepth / ONE_PLY
       && !(depth > 12 * ONE_PLY && size < 4)
 	  && pos_non_pawn_material(pos_stm()) > (depth > 12 * ONE_PLY) * BishopValueMg) { 
 
@@ -240,7 +257,7 @@ Value search_NonPV(Pos *pos, Stack *ss, Value alpha, Depth depth, int cutNode)
       if (abs(beta) < VALUE_KNOWN_WIN)
 		return nullValue;
 
-      // Do verification search when searching for mate
+      // Do verification search at high depths
       ss->skipEarlyPruning = 1;
       Value v = depth-R < ONE_PLY ? qsearch_NonPV_false(pos, ss, beta-1, DEPTH_ZERO)
                                   :  search_NonPV(pos, ss, beta-1, depth-R, 0);
@@ -256,8 +273,8 @@ Value search_NonPV(Pos *pos, Stack *ss, Value alpha, Depth depth, int cutNode)
   // much above beta, we can (almost) safely prune the previous move.
   if ( option_value(OPT_PROBCUT) && !PvNode
       &&  depth >= 5 * ONE_PLY
-      &&  abs(beta) < VALUE_MATE_IN_MAX_PLY) {
-
+      &&  abs(beta) < VALUE_MATE_IN_MAX_PLY)
+  {
     Value rbeta = min(beta + 200, VALUE_INFINITE);
     Depth rdepth = depth - 4 * ONE_PLY;
 
@@ -316,7 +333,7 @@ moves_loop: // When in check search starts from here.
                          &&  tte_depth(tte) >= depth - 3 * ONE_PLY;
   skipQuiets = 0;
   ttCapture = 0;
-  goodCap = 0;
+
   // Step 11. Loop through moves
   // Loop through all pseudo-legal moves until no moves remain or a beta cutoff occurs
   while ((move = next_move(pos, skipQuiets))) {
@@ -411,8 +428,7 @@ moves_loop: // When in check search starts from here.
       if (   !captureOrPromotion
           && !givesCheck
           && (  !advanced_pawn_push(pos, move)
-              || pos_non_pawn_material(WHITE) + pos_non_pawn_material(BLACK) >= 5000)
-             )
+              || pos_non_pawn_material(WHITE) + pos_non_pawn_material(BLACK) >= 5000))
       {
         // Move count based pruning
         if (moveCountPruning) {
@@ -459,14 +475,8 @@ moves_loop: // When in check search starts from here.
       continue;
     }
 
-    if (moveCount == 1 && captureOrPromotion)
-	{
-		if(move == ttMove)
-			ttCapture = 1;
-		else
-			if (to_sq(move) == to_sq((ss - 1)->currentMove))
-				goodCap = 1;			
-    }
+    if (move == ttMove && captureOrPromotion)
+      ttCapture = 1;
 
     // Update the current move (this must be done after singular extension
     // search)
@@ -485,14 +495,17 @@ moves_loop: // When in check search starts from here.
         && (!captureOrPromotion || moveCountPruning))
     {
       Depth r = reduction(improving, depth, moveCount, NT);
+
       if (captureOrPromotion)
         r -= r ? ONE_PLY : DEPTH_ZERO;
       else {
+        // Decrease reduction if opponent's move count is high
+        if ((ss-1)->moveCount > 15)
+          r -= ONE_PLY;
+
         // Increase reduction if ttMove is a capture
         if (ttCapture)
-            r += ONE_PLY;
-	    else if(goodCap && !inCheck && !givesCheck)
-			r += ONE_PLY; 
+          r += ONE_PLY;
 
         // Increase reduction for cut nodes
         if (cutNode)
