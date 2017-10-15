@@ -189,8 +189,14 @@ INLINE int make_castling_right(int c, int s)
 #define VALUE_INFINITE  32001
 #define VALUE_NONE      32002
 
-#define VALUE_MATE_IN_MAX_PLY  (VALUE_MATE - 2 * MAX_PLY)
-#define VALUE_MATED_IN_MAX_PLY (-VALUE_MATE + 2 * MAX_PLY)
+#ifdef LONG_MATES
+#define MAX_MATE_PLY 600
+#else
+#define MAX_MATE_PLY MAX_PLY
+#endif
+
+#define VALUE_MATE_IN_MAX_PLY  ( VALUE_MATE - MAX_MATE_PLY - MAX_PLY)
+#define VALUE_MATED_IN_MAX_PLY (-VALUE_MATE + MAX_MATE_PLY + MAX_PLY)
 
 #define PawnValueMg   171
 #define PawnValueEg   240
@@ -411,6 +417,7 @@ INLINE int opposite_colors(Square s1, Square s2)
 
 typedef struct Pos Pos;
 typedef struct LimitsType LimitsType;
+typedef struct RootMove RootMove;
 typedef struct RootMoves RootMoves;
 typedef struct PawnEntry PawnEntry;
 typedef struct MaterialEntry MaterialEntry;

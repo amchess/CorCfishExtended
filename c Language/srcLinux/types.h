@@ -2,7 +2,7 @@
   Stockfish, a UCI chess playing engine derived from Glaurung 2.1
   Copyright (C) 2004-2008 Tord Romstad (Glaurung author)
   Copyright (C) 2008-2015 Marco Costalba, Joona Kiiski, Tord Romstad
-  Copyright (C) 2015-2016 Marco Costalba, Joona Kiiski, Gary Linscott, Tord Romstad
+  Copyright (C) 2015-2017 Marco Costalba, Joona Kiiski, Gary Linscott, Tord Romstad
 
   Stockfish is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -100,10 +100,22 @@
 #define HasPext 0
 #endif
 
+#ifdef USE_AVX
+#define USE_AVX 1
+#else
+#define USE_AVX 0
+#endif
+
 #ifdef IS_64BIT
 #define Is64Bit 1
 #else
 #define Is64Bit 0
+#endif
+
+#ifdef USE_AVX2
+#define USE_AVX2 1
+#else
+#define USE_AVX2 0
 #endif
 
 #ifdef NUMA
@@ -177,8 +189,14 @@ INLINE int make_castling_right(int c, int s)
 #define VALUE_INFINITE  32001
 #define VALUE_NONE      32002
 
-#define VALUE_MATE_IN_MAX_PLY  (VALUE_MATE - 2 * MAX_PLY)
-#define VALUE_MATED_IN_MAX_PLY (-VALUE_MATE + 2 * MAX_PLY)
+#ifdef LONG_MATES
+#define MAX_MATE_PLY 600
+#else
+#define MAX_MATE_PLY MAX_PLY
+#endif
+
+#define VALUE_MATE_IN_MAX_PLY  ( VALUE_MATE - MAX_MATE_PLY - MAX_PLY)
+#define VALUE_MATED_IN_MAX_PLY (-VALUE_MATE + MAX_MATE_PLY + MAX_PLY)
 
 #define PawnValueMg   171
 #define PawnValueEg   240
@@ -399,6 +417,7 @@ INLINE int opposite_colors(Square s1, Square s2)
 
 typedef struct Pos Pos;
 typedef struct LimitsType LimitsType;
+typedef struct RootMove RootMove;
 typedef struct RootMoves RootMoves;
 typedef struct PawnEntry PawnEntry;
 typedef struct MaterialEntry MaterialEntry;

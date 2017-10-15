@@ -136,13 +136,13 @@ struct Atomic {
 // We define types for the different parts of the WLDEntry and DTZEntry with
 // corresponding specializations for pieces or pawns.
 
-struct WLDEntryPiece {
+struct WDLEntryPiece {
     PairsData* precomp;
 };
 
 struct WDLEntryPawn {
     uint8_t pawnCount[2];     // [Lead color / other color]
-    WLDEntryPiece file[2][4]; // [wtm / btm][FILE_A..FILE_D]
+    WDLEntryPiece file[2][4]; // [wtm / btm][FILE_A..FILE_D]
 };
 
 struct DTZEntryPiece {
@@ -172,7 +172,7 @@ struct WDLEntry : public TBEntry {
     WDLEntry(const std::string& code);
    ~WDLEntry();
     union {
-        WLDEntryPiece pieceTable[2]; // [wtm / btm]
+        WDLEntryPiece pieceTable[2]; // [wtm / btm]
         WDLEntryPawn  pawnTable;
     };
 };
@@ -539,7 +539,7 @@ int decompress_pairs(PairsData* d, uint64_t idx) {
     //       I(k) = k * d->span + d->span / 2      (1)
 
     // First step is to get the 'k' of the I(k) nearest to our idx, using definition (1)
-    uint32_t k = idx / d->span;
+    uint64_t k = idx / d->span;
 
     // Then we read the corresponding SparseIndex[] entry
     uint32_t block = number<uint32_t, LittleEndian>(&d->sparseIndex[k].block);
@@ -585,7 +585,9 @@ int decompress_pairs(PairsData* d, uint64_t idx) {
         // All the symbols of a given length are consecutive integers (numerical
         // sequence property), so we can compute the offset of our symbol of
         // length len, stored at the beginning of buf64.
-        sym = (buf64 - d->base64[len]) >> (64 - len - d->minSymLen);
+		uint64_t uint16_local = (buf64 - d->base64[len]) >> (64 - len - d->minSymLen);
+		assert(uint16_local > UINT16_MAX);
+        sym = uint16_t(uint16_local);
 
         // Now add the value of the lowest symbol of length len to get our symbol
         sym += number<Sym, LittleEndian>(&d->lowestSym[len]);
@@ -996,7 +998,9 @@ uint8_t* set_sizes(PairsData* d, uint8_t* data) {
 
     // groupLen[] is a zero-terminated list of group lengths, the last groupIdx[]
     // element stores the biggest index that is the tb size.
-    uint64_t tbSize = d->groupIdx[std::find(d->groupLen, d->groupLen + 7, 0) - d->groupLen];
+	uint64_t uint64_local = d->groupIdx[std::find(d->groupLen, d->groupLen + 7, 0) - d->groupLen];
+	assert(uint64_local > (sizeof(size_t)<<8) - 1);
+    size_t tbSize = size_t(uint64_local);
 
     d->sizeofBlock = 1ULL << *data++;
     d->span = 1ULL << *data++;

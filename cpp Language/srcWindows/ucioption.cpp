@@ -24,6 +24,8 @@
 #include <iostream>
 #include "misc.h"
 #include <thread>
+
+#include "evaluate.h"
 #include "misc.h"
 #include "search.h"
 #include "thread.h"
@@ -49,6 +51,8 @@ void on_tb_path(const Option& o) { Tablebases::init(o); }
 void on_HashFile(const Option& o) { TT.set_hash_file_name(o); }
 void SaveHashtoFile(const Option&) { TT.save(); }
 void LoadHashfromFile(const Option&) { TT.load(); }
+void LoadEpdToHash(const Option&) { TT.load_epd_to_hash(); }
+
 void on_brainbook_path(const Option& o) { tzbook.init(o); }
 void on_book_move2_prob(const Option& o) { tzbook.set_book_move2_probability(o); }
 
@@ -66,13 +70,11 @@ void init(OptionsMap& o) {
 
   const int MaxHashMB = Is64Bit ? 1024 * 1024 : 2048;
 
-  
   unsigned int n = std::thread::hardware_concurrency();
   if (!n) n = 1;
 
   o["Debug Log File"]          << Option("", on_logger);
   o["Contempt"]                << Option(0, -100, 100);
-  o["OwnBook"]                 << Option(false);
   o["Threads"]                 << Option(n, 1, 512, on_threads);
   o["Hash"]                    << Option(128, 1, MaxHashMB, on_hash_size);
   o["Clear Hash"]              << Option(on_clear_hash);
@@ -83,6 +85,7 @@ void init(OptionsMap& o) {
   o["HashFile"]		           << Option("hash.hsh", on_HashFile);
   o["SaveHashtoFile"]		   << Option(SaveHashtoFile);
   o["LoadHashfromFile"]		   << Option(LoadHashfromFile);
+  o["LoadEpdToHash"]            << Option(LoadEpdToHash);
   o["Best Book Move"]          << Option(false);
   o["Book File"]               << Option("book.bin");
   o["Move Overhead"]           << Option(100, 0, 5000);
@@ -94,14 +97,27 @@ void init(OptionsMap& o) {
   o["Syzygy50MoveRule"]        << Option(true);
   o["SyzygyProbeLimit"]        << Option(6, 0, 6);
   o["Cerebellum Library"]      << Option();
-  o["Book Move2 Probability"]  << Option(0, 0, 100, on_book_move2_prob);
-  o["BookPath"]                << Option("<empty>", on_brainbook_path);
+
   
   //Correspondence section
   o["Correspondence Chess Analyzer"]     << Option();
-  o["Correspondence Mode"]     << Option(false);
+  o["Analysis Mode"]     << Option(false);
   o["NullMove"]                << Option(true);
   o["Clean Search"]            << Option(false);
+  
+  //Shashin section
+  o["Shashin model"]     << Option();
+  o["Safety Evaluator"]        << Option(false);
+
+  //Polyglot Book management
+  o["Polyglot Book management"] << Option();
+  o["OwnBook"]                  << Option(false);
+  o["Best Book Move"]           << Option(false);
+  o["Book File"]                << Option("book.bin");  //Cerebellum Book Library
+
+  o["Cerebellum Library"]       << Option();
+  o["Book Move2 Probability"]   << Option(0, 0, 100, on_book_move2_prob);
+  o["BookPath"]                 << Option("Cerebellum_Light.bin", on_brainbook_path);
   
   o["Advanced Features"]      << Option();
   o["Razoring"]               << Option(true);

@@ -60,9 +60,10 @@ typedef void (*OnChange)(Option *);
 #define OPT_SYZ_PROBE_DEPTH 20
 #define OPT_SYZ_50_MOVE     21
 #define OPT_SYZ_PROBE_LIMIT 22
-#define OPT_LARGE_PAGES     23
-#define OPT_VARIETY         24
-#define OPT_NUMA            25
+#define OPT_SYZ_USE_DTM     23
+#define OPT_LARGE_PAGES     24
+#define OPT_VARIETY         25
+#define OPT_NUMA            26
 
 struct Option {
   char *name;

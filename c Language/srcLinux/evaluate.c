@@ -26,6 +26,16 @@
 #include "material.h"
 #include "pawns.h"
 
+#define Center      ((FileDBB | FileEBB) & (Rank4BB | Rank5BB))
+#define QueenSide   (FileABB | FileBBB | FileCBB | FileDBB)
+#define CenterFiles (FileCBB | FileDBB | FileEBB | FileFBB)
+#define KingSide    (FileEBB | FileFBB | FileGBB | FileHBB)
+
+static const Bitboard KingFlank[8] = {
+  QueenSide, QueenSide, QueenSide, CenterFiles,
+  CenterFiles, KingSide, KingSide, KingSide
+};
+
 // Struct EvalInfo contains various information computed and collected
 // by the evaluation functions.
 struct EvalInfo {
@@ -97,8 +107,8 @@ static const Score MobilityBonus[4][32] = {
 // if they can reach an outpost square, bigger if that square is supported0
 // by a pawn. If the minor occupies an outpost square, then score is doubled.
 static const Score Outpost[][2] = {
-  { S(22, 6), S(33, 9) }, // Knight
-  { S( 9, 2), S(14, 4) }  // Bishop
+  { S(22, 6), S(36,12) }, // Knight
+  { S( 9, 2), S(15, 5) }  // Bishop
 };
 
 // RookOnFile[semiopen/open] contains bonuses for each rook when there is
@@ -139,6 +149,7 @@ const Score KingProtector[] = { S(-3, -5), S(-4, -3), S(-3, 0), S(-1, 1) };
 // Assorted bonuses and penalties used by evaluation
 static const Score MinorBehindPawn     = S( 16,  0);
 static const Score BishopPawns         = S(  8, 12);
+static const Score LongRangedBishop    = S( 22,  0);
 static const Score RookOnPawn          = S(  8, 24);
 static const Score TrappedRook         = S( 92,  0);
 static const Score WeakQueen           = S( 50, 10);
@@ -146,9 +157,10 @@ static const Score OtherCheck          = S( 10, 10);
 static const Score CloseEnemies        = S(  7,  0);
 static const Score PawnlessFlank       = S( 20, 80);
 static const Score ThreatByHangingPawn = S( 71, 61);
-static const Score ThreatBySafePawn    = S(182,175);
+static const Score ThreatBySafePawn    = S(192,175);
 static const Score ThreatByRank        = S( 16,  3);
 static const Score Hanging             = S( 48, 27);
+static const Score WeakUnopposedPawn   = S(  5, 25);
 static const Score ThreatByPawnPush    = S( 38, 22);
 static const Score HinderPassedPawn    = S(  7,  0);
 
@@ -269,9 +281,15 @@ INLINE Score evaluate_piece(const Pos *pos, EvalInfo *ei, Score *mobility,
           && (pieces_p(PAWN) & sq_bb(s + pawn_push(Us))))
         score += MinorBehindPawn;
 
-      // Penalty for pawns on the same color square as the bishop
-      if (Pt == BISHOP)
+      if (Pt == BISHOP) {
+        // Penalty for pawns on the same color square as the bishop
         score -= BishopPawns * pawns_on_same_color_squares(ei->pe, Us, s);
+
+        // Bonus for bishop on a long diagonal which can "see" both center
+        // squares
+        if (more_than_one(Center & (attacks_bb_bishop(s, pieces_p(PAWN)) | sq_bb(s))))
+          score += LongRangedBishop;
+      }
 
       // An important Chess960 pattern: A cornered bishop blocked by a friendly
       // pawn diagonally in front of it is a very serious problem, especially
@@ -335,14 +353,6 @@ INLINE Score evaluate_pieces(const Pos *pos, EvalInfo *ei, Score *mobility)
 
 
 // evaluate_king() assigns bonuses and penalties to a king of a given color.
-
-#define QueenSide   (FileABB | FileBBB | FileCBB | FileDBB)
-#define CenterFiles (FileCBB | FileDBB | FileEBB | FileFBB)
-#define KingSide    (FileEBB | FileFBB | FileGBB | FileHBB)
-
-static const Bitboard KingFlank[8] = {
-  QueenSide, QueenSide, QueenSide, CenterFiles, CenterFiles, KingSide, KingSide, KingSide
-};
 
 INLINE Score evaluate_king(const Pos *pos, EvalInfo *ei, int Us)
 {
@@ -529,6 +539,10 @@ INLINE Score evaluate_threats(const Pos *pos, EvalInfo *ei, const int Us)
     if (b)
       score += ThreatByKing[!!more_than_one(b)];
   }
+
+  // Bonus for opponent unopposed weak pawns
+  if (pieces_cpp(Us, ROOK, QUEEN))
+    score += WeakUnopposedPawn * ei->pe->weakUnopposed[Them];
 
   // Find the squares reachable by a single pawn push
   b  = shift_bb(Up, pieces_cp(Us, PAWN)) & ~pieces();

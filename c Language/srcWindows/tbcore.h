@@ -43,12 +43,12 @@
 
 #define WDLSUFFIX ".rtbw"
 #define DTZSUFFIX ".rtbz"
-#define WDLDIR "RTBWDIR"
-#define DTZDIR "RTBZDIR"
+#define DTMSUFFIX ".rtbm"
 #define TBPIECES 6
 
-const uint8_t WDL_MAGIC[4] = { 0x71, 0xe8, 0x23, 0x5d };
-const uint8_t DTZ_MAGIC[4] = { 0xd7, 0x66, 0x0c, 0xa5 };
+const uint32_t WDL_MAGIC = 0x5d23e871;
+const uint32_t DTZ_MAGIC = 0xa50c66d7;
+const uint32_t DTM_MAGIC = 0x88ac504b;
 
 #define TBHASHBITS 10
 
@@ -65,7 +65,8 @@ struct PairsData {
   uint8_t *sympat;
   uint32_t blocksize;
   uint32_t idxbits;
-  uint32_t min_len;
+  uint8_t min_len;
+  uint8_t const_val[2];
   base_t base[]; // must be base[1] in C++
 };
 
@@ -77,6 +78,7 @@ struct TBEntry {
   uint8_t num;
   uint8_t symmetric;
   uint8_t has_pawns;
+  uint8_t loss_only;
 }
 #ifndef _WIN32
 __attribute__((__may_alias__))
@@ -91,6 +93,7 @@ struct TBEntry_piece {
   uint8_t num;
   uint8_t symmetric;
   uint8_t has_pawns;
+  uint8_t loss_only;
   uint8_t enc_type;
   struct PairsData *precomp[2];
   int factor[2][TBPIECES];
@@ -106,6 +109,7 @@ struct TBEntry_pawn {
   uint8_t num;
   uint8_t symmetric;
   uint8_t has_pawns;
+  uint8_t loss_only;
   uint8_t pawns[2];
   struct {
     struct PairsData *precomp[2];
@@ -113,6 +117,24 @@ struct TBEntry_pawn {
     uint8_t pieces[2][TBPIECES];
     uint8_t norm[2][TBPIECES];
   } file[4];
+};
+
+struct TBEntry_pawn2 {
+  uint8_t *data;
+  Key key;
+  uint64_t mapping;
+  atomic_uchar ready;
+  uint8_t num;
+  uint8_t symmetric;
+  uint8_t has_pawns;
+  uint8_t loss_only;
+  uint8_t pawns[2];
+  struct {
+    struct PairsData *precomp[2];
+    int factor[2][TBPIECES];
+    uint8_t pieces[2][TBPIECES];
+    uint8_t norm[2][TBPIECES];
+  } rank[6];
 };
 
 struct DTZEntry_piece {
@@ -123,6 +145,7 @@ struct DTZEntry_piece {
   uint8_t num;
   uint8_t symmetric;
   uint8_t has_pawns;
+  uint8_t loss_only;
   uint8_t enc_type;
   struct PairsData *precomp;
   int factor[TBPIECES];
@@ -141,6 +164,7 @@ struct DTZEntry_pawn {
   uint8_t num;
   uint8_t symmetric;
   uint8_t has_pawns;
+  uint8_t loss_only;
   uint8_t pawns[2];
   struct {
     struct PairsData *precomp;
@@ -153,9 +177,48 @@ struct DTZEntry_pawn {
   uint8_t *map;
 };
 
+struct DTMEntry_piece {
+  uint8_t *data;
+  Key key;
+  uint64_t mapping;
+  atomic_uchar ready;
+  uint8_t num;
+  uint8_t symmetric;
+  uint8_t has_pawns;
+  uint8_t loss_only;
+  uint8_t enc_type;
+  struct PairsData *precomp[2];
+  int factor[2][TBPIECES];
+  uint8_t pieces[2][TBPIECES];
+  uint8_t norm[2][TBPIECES];
+  uint16_t map_idx[2][2];
+  uint16_t *map;
+};
+
+struct DTMEntry_pawn {
+  uint8_t *data;
+  Key key;
+  uint64_t mapping;
+  atomic_uchar ready;
+  uint8_t num;
+  uint8_t symmetric;
+  uint8_t has_pawns;
+  uint8_t loss_only;
+  uint8_t pawns[2];
+  struct {
+    struct PairsData *precomp[2];
+    int factor[2][TBPIECES];
+    uint8_t pieces[2][TBPIECES];
+    uint8_t norm[2][TBPIECES];
+  } rank[6];
+  uint16_t map_idx[6][2][2];
+  uint16_t *map;
+};
+
 struct TBHashEntry {
   Key key;
   struct TBEntry *ptr;
+  struct TBEntry *dtm_ptr;
 };
 
 struct DTZTableEntry {

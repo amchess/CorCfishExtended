@@ -140,14 +140,14 @@ enum MoveType {
 };
 
 enum Color {
-  WHITE, BLACK, COLOR_NB = 2
+  WHITE, BLACK, NO_COLOR, COLOR_NB = 2
 };
 
 enum CastlingSide {
   KING_SIDE, QUEEN_SIDE, CASTLING_SIDE_NB = 2
 };
 
-enum CastlingRight {
+enum CastlingRight {  // Defined as in PolyGlot book hash key
   NO_CASTLING,
   WHITE_OO,
   WHITE_OOO = WHITE_OO << 1,

@@ -28,8 +28,18 @@
 #include "evaluate.h"
 #include "material.h"
 #include "pawns.h"
+#include "uci.h"
 
 namespace {
+
+  const Bitboard Center      = (FileDBB | FileEBB) & (Rank4BB | Rank5BB);
+  const Bitboard QueenSide   = FileABB | FileBBB | FileCBB | FileDBB;
+  const Bitboard CenterFiles = FileCBB | FileDBB | FileEBB | FileFBB;
+  const Bitboard KingSide    = FileEBB | FileFBB | FileGBB | FileHBB;
+
+  const Bitboard KingFlank[FILE_NB] = {
+    QueenSide, QueenSide, QueenSide, CenterFiles, CenterFiles, KingSide, KingSide, KingSide
+  };
 
   namespace Trace {
 
@@ -78,7 +88,7 @@ namespace {
 
   public:
     Evaluation() = delete;
-    Evaluation(const Position& p) : pos(p) {}
+    Evaluation(const Position& p) : pos(p) {};
     Evaluation& operator=(const Evaluation&) = delete;
 
     Value value();
@@ -162,8 +172,8 @@ namespace {
   // supported by a pawn. If the minor piece occupies an outpost square
   // then score is doubled.
   const Score Outpost[][2] = {
-    { S(22, 6), S(35, 9) }, // Knight
-    { S( 9, 2), S(14, 4) }  // Bishop
+    { S(22, 6), S(36,12) }, // Knight
+    { S( 9, 2), S(15, 5) }  // Bishop
   };
 
   // RookOnFile[semiopen/open] contains bonuses for each rook when there is no
@@ -204,6 +214,7 @@ namespace {
   // Assorted bonuses and penalties used by evaluation
   const Score MinorBehindPawn     = S( 16,  0);
   const Score BishopPawns         = S(  8, 12);
+  const Score LongRangedBishop    = S( 22,  0);
   const Score RookOnPawn          = S(  8, 24);
   const Score TrappedRook         = S( 92,  0);
   const Score WeakQueen           = S( 50, 10);
@@ -211,9 +222,10 @@ namespace {
   const Score CloseEnemies        = S(  7,  0);
   const Score PawnlessFlank       = S( 20, 80);
   const Score ThreatByHangingPawn = S( 71, 61);
-  const Score ThreatBySafePawn    = S(182,175);
+  const Score ThreatBySafePawn    = S(192,175);
   const Score ThreatByRank        = S( 16,  3);
   const Score Hanging             = S( 48, 27);
+  const Score WeakUnopposedPawn   = S(  5, 25);
   const Score ThreatByPawnPush    = S( 38, 22);
   const Score HinderPassedPawn    = S(  7,  0);
   const Score TrappedBishopA1H1   = S( 50, 50);
@@ -336,9 +348,15 @@ namespace {
                 && (pos.pieces(PAWN) & (s + pawn_push(Us))))
                 score += MinorBehindPawn;
 
-            // Penalty for pawns on the same color square as the bishop
             if (Pt == BISHOP)
+            {
+                // Penalty for pawns on the same color square as the bishop
                 score -= BishopPawns * pe->pawns_on_same_color_squares(Us, s);
+
+                // Bonus for bishop on a long diagonal which can "see" both center squares
+                if (more_than_one(Center & (attacks_bb<BISHOP>(s, pos.pieces(PAWN)) | s)))
+                    score += LongRangedBishop;
+            }
 
             // An important Chess960 pattern: A cornered bishop blocked by a friendly
             // pawn diagonally in front of it is a very serious problem, especially
@@ -393,14 +411,6 @@ namespace {
 
 
   // evaluate_king() assigns bonuses and penalties to a king of a given color
-
-  const Bitboard QueenSide   = FileABB | FileBBB | FileCBB | FileDBB;
-  const Bitboard CenterFiles = FileCBB | FileDBB | FileEBB | FileFBB;
-  const Bitboard KingSide    = FileEBB | FileFBB | FileGBB | FileHBB;
-
-  const Bitboard KingFlank[FILE_NB] = {
-    QueenSide, QueenSide, QueenSide, CenterFiles, CenterFiles, KingSide, KingSide, KingSide
-  };
 
   template<Tracing T>  template<Color Us>
   Score Evaluation<T>::evaluate_king() {
@@ -591,6 +601,10 @@ namespace {
         if (b)
             score += ThreatByKing[more_than_one(b)];
     }
+
+    // Bonus for opponent unopposed weak pawns
+    if (pos.pieces(Us, ROOK, QUEEN))
+        score += WeakUnopposedPawn * pe->weak_unopposed(Them);
 
     // Find squares where our pawns can push on the next move
     b  = shift<Up>(pos.pieces(Us, PAWN)) & ~pos.pieces();
@@ -821,12 +835,18 @@ namespace {
     // Initialize score by reading the incrementally updated scores included in
     // the position object (material + piece square tables) and the material
     // imbalance. Score is computed internally from the white point of view.
-    Score score = pos.psq_score() + me->imbalance();
+    Score score=SCORE_ZERO;
+	bool safetyEvaluator=Options["Safety Evaluator"]; 
+	if(!safetyEvaluator){
+		score= pos.psq_score() + me->imbalance();
+	}
+	
 
     // Probe the pawn hash table
     pe = Pawns::probe(pos);
-    score += pe->pawns_score();
-
+    if(!safetyEvaluator){
+		score += pe->pawns_score();
+    }
     Value v;
 
     // Main evaluation begins here
@@ -834,12 +854,12 @@ namespace {
     initialize<WHITE>();
     initialize<BLACK>();
 
-    score += evaluate_pieces<WHITE, KNIGHT>() - evaluate_pieces<BLACK, KNIGHT>();
-    score += evaluate_pieces<WHITE, BISHOP>() - evaluate_pieces<BLACK, BISHOP>();
-    score += evaluate_pieces<WHITE, ROOK  >() - evaluate_pieces<BLACK, ROOK  >();
-    score += evaluate_pieces<WHITE, QUEEN >() - evaluate_pieces<BLACK, QUEEN >();
-
-    score += mobility[WHITE] - mobility[BLACK];
+		
+	score += evaluate_pieces<WHITE, KNIGHT>() - evaluate_pieces<BLACK, KNIGHT>();
+	score += evaluate_pieces<WHITE, BISHOP>() - evaluate_pieces<BLACK, BISHOP>();
+	score += evaluate_pieces<WHITE, ROOK  >() - evaluate_pieces<BLACK, ROOK  >();
+	score += evaluate_pieces<WHITE, QUEEN >() - evaluate_pieces<BLACK, QUEEN >();
+	score += mobility[WHITE] - mobility[BLACK];
 
     score +=  evaluate_king<WHITE>()
             - evaluate_king<BLACK>();
@@ -847,15 +867,14 @@ namespace {
     score +=  evaluate_threats<WHITE>()
             - evaluate_threats<BLACK>();
 
-    score +=  evaluate_passed_pawns<WHITE>()
+    if(!safetyEvaluator){
+		score +=  evaluate_passed_pawns<WHITE>()
             - evaluate_passed_pawns<BLACK>();
-
-    if (pos.non_pawn_material() >= SpaceThreshold)
-        score +=  evaluate_space<WHITE>()
-                - evaluate_space<BLACK>();
-
-    score += evaluate_initiative(eg_value(score));
-
+		if (pos.non_pawn_material() >= SpaceThreshold)
+			score +=  evaluate_space<WHITE>()
+					- evaluate_space<BLACK>();
+		score += evaluate_initiative(eg_value(score));
+    } 
     // Interpolate between a middlegame and a (scaled by 'sf') endgame score
     ScaleFactor sf = evaluate_scale_factor(eg_value(score));
     v =  mg_value(score) * int(me->game_phase())
@@ -866,13 +885,30 @@ namespace {
     // In case of tracing add all remaining individual evaluation terms
     if (T)
     {
-        Trace::add(MATERIAL, pos.psq_score());
-        Trace::add(IMBALANCE, me->imbalance());
-        Trace::add(PAWN, pe->pawns_score());
-        Trace::add(MOBILITY, mobility[WHITE], mobility[BLACK]);
+        if(!safetyEvaluator){
+			Trace::add(MATERIAL, pos.psq_score());
+			Trace::add(IMBALANCE, me->imbalance());
+			Trace::add(PAWN, pe->pawns_score());
+			Trace::add(MOBILITY, mobility[WHITE], mobility[BLACK]);
+		}
+		else{
+			Trace::add(MATERIAL, SCORE_ZERO);
+			Trace::add(IMBALANCE, SCORE_ZERO);
+			Trace::add(PAWN, SCORE_ZERO);
+			Trace::add(MOBILITY, SCORE_ZERO, SCORE_ZERO);
+		}
+        
+        
+        
         if (pos.non_pawn_material() >= SpaceThreshold)
-            Trace::add(SPACE, evaluate_space<WHITE>()
+            if(!safetyEvaluator){
+				Trace::add(SPACE, evaluate_space<WHITE>()
                             , evaluate_space<BLACK>());
+			}
+			else{
+				Trace::add(SPACE, SCORE_ZERO
+                            , SCORE_ZERO);			
+			}
         Trace::add(TOTAL, score);
     }
 

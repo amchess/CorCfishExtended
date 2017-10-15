@@ -65,13 +65,13 @@ OBJS = benchmark.o bitbase.o bitboard.o endgame.o evaluate.o main.o \
 ### 2.1. General and architecture defaults
 debug = no
 optimize = yes
-arch = x86_32
-bits = 32
-prefetch = no
-popcnt = no
-sse = no
+arch = x86_64
+bits = 64
+prefetch = yes
+popcnt = yes
+sse = yes
 pext = no
-native = no
+native = yes
 numa = yes
 
 ### 2.2 Architecture specific
@@ -162,11 +162,11 @@ ifeq ($(COMP),mingw)
 
 	ifeq ($(UNAME),Linux)
 		ifeq ($(bits),64)
- 			ifeq ($(shell which x86_64-w64-mingw32-cc-posix),)
+#			ifeq ($(shell which x86_64-w64-mingw32-cc-posix),)
 				CC=x86_64-w64-mingw32-gcc
-			else
-				CC=x86_64-w64-mingw32-cc-posix
-			endif
+#			else
+#				CC=x86_64-w64-mingw32-cc-posix
+#			endif
 		else
 			ifeq ($(shell which i686-w64-mingw32-cc-posix),)
 				CC=i686-w64-mingw32-cc
@@ -179,7 +179,7 @@ ifeq ($(COMP),mingw)
 	endif
 
 	CFLAGS += -Wextra -Wshadow
-	LDFLAGS += -static
+	LDFLAGS += #-static
 endif
 
 ifeq ($(COMP),icc)
@@ -340,7 +340,7 @@ endif
 ifeq ($(comp),gcc)
 	ifeq ($(optimize),yes)
 	ifeq ($(debug),no)
-		CFLAGS +=  -flto
+		CFLAGS += # -flto
 		LDFLAGS += $(CFLAGS)
 	endif
 	endif
@@ -350,7 +350,7 @@ ifeq ($(comp),mingw)
 	ifeq ($(UNAME),Linux)
 	ifeq ($(optimize),yes)
 	ifeq ($(debug),no)
-		CFLAGS +=  -flto
+		CFLAGS += # -flto
 		LDFLAGS += $(CFLAGS)
 	endif
 	endif

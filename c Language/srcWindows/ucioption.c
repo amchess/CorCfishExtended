@@ -103,13 +103,14 @@ static Option options_map[] = {
   { "MultiPV", OPT_TYPE_SPIN, 1, 1, 500, NULL, NULL, 0, NULL },
   { "Repetition Fix", OPT_TYPE_CHECK, 0, 0, 0, NULL, NULL, 0, NULL },
   { "Skill Level", OPT_TYPE_SPIN, 20, 0, 20, NULL, NULL, 0, NULL },
-  { "Move Overhead", OPT_TYPE_SPIN, 60, 0, 5000, NULL, NULL, 0, NULL },
+  { "Move Overhead", OPT_TYPE_SPIN, 100, 0, 5000, NULL, NULL, 0, NULL },
   { "nodestime", OPT_TYPE_SPIN, 0, 0, 10000, NULL, NULL, 0, NULL },
   { "UCI_Chess960", OPT_TYPE_CHECK, 0, 0, 0, NULL, NULL, 0, NULL },
   { "SyzygyPath", OPT_TYPE_STRING, 0, 0, 0, "<empty>", on_tb_path, 0, NULL },
   { "SyzygyProbeDepth", OPT_TYPE_SPIN, 1, 1, 100, NULL, NULL, 0, NULL },
   { "Syzygy50MoveRule", OPT_TYPE_CHECK, 1, 0, 0, NULL, NULL, 0, NULL },
   { "SyzygyProbeLimit", OPT_TYPE_SPIN, 6, 0, 6, NULL, NULL, 0, NULL },
+  { "SyzygyUseDTM", OPT_TYPE_CHECK, 1, 0, 0, NULL, NULL, 0, NULL },
   { "LargePages", OPT_TYPE_CHECK, 1, 0, 0, NULL, on_largepages, 0, NULL },
   { "Variety", OPT_TYPE_SPIN, 0, 0, 40, NULL, NULL, 0, NULL },
   { "NUMA", OPT_TYPE_STRING, 0, 0, 0, "all", on_numa, 0, NULL },
@@ -172,7 +173,7 @@ static char *opt_type_str[] =
   "check", "spin", "button", "string"
 };
 
-// print_options() priints all options in the format required by the
+// print_options() prints all options in the format required by the
 // UCI protocol.
 
 void print_options(void)
@@ -183,7 +184,7 @@ void print_options(void)
     printf("option name %s type %s", opt->name, opt_type_str[opt->type]);
     switch (opt->type) {
     case OPT_TYPE_CHECK:
-      printf(" default %s", opt->value ? "true" : "false");
+      printf(" default %s", opt->def ? "true" : "false");
       break;
     case OPT_TYPE_SPIN:
       printf(" default %d min %d max %d", opt->def, opt->min_val, opt->max_val);

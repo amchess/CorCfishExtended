@@ -39,7 +39,7 @@ struct StatBoards : public std::array<std::array<T, Size2>, Size1> {
   void update(T& entry, int bonus, const int D) {
 
     assert(abs(bonus) <= D); // Ensure range is [-32 * D, 32 * D]
-    assert(abs(32 * D) < INT16_MAX); // Ensure we don't overflow
+	assert(abs(32 * D) < INT16_MAX); // Ensure we don't overflow
 
     entry += bonus * 32 - entry * abs(bonus) / D;
 
@@ -106,7 +106,7 @@ private:
   const Position& pos;
   const ButterflyHistory* mainHistory;
   const PieceToHistory** contHistory;
-  Move ttMove, countermove, killers[2];
+  Move ttMove, countermove, killers[4];
   ExtMove *cur, *endMoves, *endBadCaptures;
   int stage;
   Square recaptureSquare;

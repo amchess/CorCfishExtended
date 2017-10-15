@@ -47,10 +47,18 @@ void TZBook::init(const std::string& path)
     if (strcmp(p, "<empty>") == 0)
         return;
 
-    FILE *fpt = fopen(p, "rb");
-    if (fpt == NULL)
+#ifdef _WIN32
+	FILE *fpt;
+	errno_t errno_local = fopen_s(&fpt, p, "rb");
+    if (fpt == NULL || errno_local != 0)
     {
-        sync_cout << "info string Could not open " << path << sync_endl;
+		assert(errno_local != 0);
+#else
+	FILE *fpt = fopen(p, "rb");
+	if (fpt == NULL)
+	{
+#endif
+		sync_cout << "info string Could not open " << path << sync_endl;
         return;
     }
 
@@ -67,7 +75,11 @@ void TZBook::init(const std::string& path)
     keycount = filesize / 8;
     tzhash2 = new TZHash2[keycount];
     
-    fread(tzhash2, 1, filesize, fpt);
+    size_t actually_read = fread(tzhash2, 1, filesize, fpt);
+	if (actually_read != size_t(1)*filesize)
+	{
+		sync_cout << "info string Could not read all data of " << path << sync_endl;
+	}
     fclose(fpt);
 
     sync_cout << "info string Book loaded: " << path << sync_endl;
