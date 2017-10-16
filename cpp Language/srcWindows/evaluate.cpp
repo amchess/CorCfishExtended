@@ -839,14 +839,16 @@ namespace {
 	bool safetyEvaluator=Options["Safety Evaluator"]; 
 	if(!safetyEvaluator){
 		score= pos.psq_score() + me->imbalance();
-	}
-	
-
-    // Probe the pawn hash table
-    pe = Pawns::probe(pos);
-    if(!safetyEvaluator){
-		score += pe->pawns_score();
+		// Probe the pawn hash table
+		pe = Pawns::probe(pos);
+		if(!safetyEvaluator){
+			score += pe->pawns_score();
+		}
     }
+	else{
+		// Probe the pawn hash table
+		pe = Pawns::probe(pos);
+	}
     Value v;
 
     // Main evaluation begins here
