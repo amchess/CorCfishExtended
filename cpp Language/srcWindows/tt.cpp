@@ -59,10 +59,12 @@ std::vector<std::string> split(const std::string &s, char delim) {
 }
 
 TranspositionTable TT; // Our global transposition table
+#ifdef _WIN32
 int use_large_pages = -1;
 int got_privileges = -1;
+#endif
 
-
+#ifdef _WIN32
 bool Get_LockMemory_Privileges()
 {
     HANDLE TH, PROC7;
@@ -111,7 +113,7 @@ void Try_Get_LockMemory_Privileges()
 
     use_large_pages = 1;        
 }
-
+#endif
 
 /// TranspositionTable::resize() sets the size of the transposition table,
 /// measured in megabytes. Transposition table consists of a power of 2 number
@@ -127,34 +129,45 @@ void TranspositionTable::resize(int64_t mbSize) {
 
   mbSize_last_used = mbSize;
 
+#ifdef _WIN32
   Try_Get_LockMemory_Privileges();
+#endif
 
   size_t newClusterCount = size_t(1) << msb((mbSize * 1024 * 1024) / sizeof(Cluster));
 
   if (newClusterCount == clusterCount)
   {
+#ifdef _WIN32
       if ((use_large_pages == 1) && (large_pages_used))      
           return;
       if ((use_large_pages == 0) && (large_pages_used == false))
+#endif
           return;
   }
 
   clusterCount = newClusterCount;
  
+#ifdef _WIN32
   if (use_large_pages < 1)
+#endif
   {
       if (mem != NULL)
       {
+#ifdef _WIN32
           if (large_pages_used)
               VirtualFree(mem, 0, MEM_RELEASE);
-          else          
+          else
+#endif
               free(mem);
       }
 
       size_t memsize = clusterCount * sizeof(Cluster) + CacheLineSize - 1;
       mem = calloc(memsize, 1);
+#ifdef _WIN32
       large_pages_used = false;
+#endif
   }
+#ifdef _WIN32
   else
   {
       if (mem != NULL)
@@ -179,16 +192,17 @@ void TranspositionTable::resize(int64_t mbSize) {
       }
       else
       {
-          sync_cout << "info string LargePages " << (memsize >> 20) << " Mb" << sync_endl;
+          sync_cout << "info string LargePages " << (memsize >> 20) << " MiB" << sync_endl;
           large_pages_used = true;
       }
         
   }
+#endif
 
   if (!mem)
   {
       std::cerr << "Failed to allocate " << mbSize
-                << "MB for transposition table." << std::endl;
+                << "MiB for transposition table." << std::endl;
       exit(EXIT_FAILURE);
   }
 

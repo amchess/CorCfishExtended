@@ -263,14 +263,51 @@ const std::string hardware_info()
 
 		GetSystemInfo(&siSysInfo);
 
+		HKEY hKey = HKEY_LOCAL_MACHINE;
+		const DWORD Const_Data_Size = 10000;
+		TCHAR Data[Const_Data_Size];
+
+		ZeroMemory(Data, Const_Data_Size * sizeof(TCHAR));
+
+		DWORD buffersize = Const_Data_Size;
+
+		LONG result_registry_functions = ERROR_SUCCESS;
+
+		result_registry_functions = RegOpenKeyEx(HKEY_LOCAL_MACHINE, TEXT("Hardware\\Description\\System\\CentralProcessor\\0\\"), 0, KEY_READ, &hKey);
+
+		if (result_registry_functions == ERROR_SUCCESS)
+		{
+			// Query the registry value
+			result_registry_functions = RegQueryValueEx(hKey, TEXT("ProcessorNameString"), NULL, NULL, (LPBYTE)&Data, &buffersize);
+
+			if (result_registry_functions == ERROR_SUCCESS)
+			{
+				// Close the Registry Key
+				result_registry_functions = RegCloseKey(hKey);
+
+				assert(result_registry_functions == ERROR_SUCCESS);
+			}
+			else
+			{
+				assert(result_registry_functions == ERROR_SUCCESS);
+			}
+		}
+		else
+		{
+			assert(result_registry_functions == ERROR_SUCCESS);
+		}
+
+		std::string ProcessorName(Data);
+
 		// Display the contents of the SYSTEM_INFO structure. 
 
 		result << std::endl;
 
 		result << "Hardware information : " << std::endl;
-		result << "  CPU Architecture   : " << siSysInfo.wProcessorArchitecture << std::endl;
+		result << "  CPU Brand          : " << ProcessorName << std::endl;
+		//result << "  CPU Architecture   : " << siSysInfo.wProcessorArchitecture << std::endl;
 		result << "  CPU Core           : " << siSysInfo.dwNumberOfProcessors << std::endl;
-		result << "  Processor type     : " << siSysInfo.dwProcessorType << std::endl;
+		//result << "  Processor type     : " << siSysInfo.dwProcessorType << std::endl;
 
 		// Use to convert bytes to MB
 		const size_t local_1000_000 = 1000 * 1000;

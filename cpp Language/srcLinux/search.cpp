@@ -24,6 +24,7 @@
 #include <cstring>   // For std::memset
 #include <iostream>
 #include <sstream>
+#include <random>
 
 #include "book.h"
 #include "tzbook.h"
@@ -89,9 +90,10 @@ namespace {
 
   // Skill structure is used to implement strength limit
   struct Skill {
-    explicit Skill(int l) : level(l) {}
+    Skill(int l) : level(l) {}
     bool enabled() const { return level < 20; }
     bool time_to_pick(Depth depth) const { return depth / ONE_PLY == 1 + level; }
+    Move best_move(size_t multiPV) { return best ? best : pick_best(multiPV); }
     Move pick_best(size_t multiPV);
 
     int level;
@@ -132,16 +134,18 @@ namespace {
       }
     }
 
-    Key expectedPosKey;
     int stableCnt;
+    Key expectedPosKey;
     Move pv[3];
   };
 
   EasyMoveManager EasyMove;
+  bool cleanSearch;
   Value DrawValue[COLOR_NB];
   int variety;
-  bool correspondenceMode = Options["Correspondence Mode"];
-  bool doRazor, doFutility, doPruning, doNull, doProbcut, doLMR;
+  bool correspondenceMode = Options["Analysis Mode"];
+  bool safetyEvaluator=Options["Safety Evaluator"];
+  bool bruteForce,limitStrength,doRazor, doFutility, doPruning, doNull, doProbcut, doLMR;
   Depth maxLMR;
   template <NodeType NT>
   Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, bool cutNode, bool skipEarlyPruning);
@@ -155,39 +159,15 @@ namespace {
   void update_continuation_histories(Stack* ss, Piece pc, Square to, int bonus);
   void update_stats(const Position& pos, Stack* ss, Move move, Move* quiets, int quietsCnt, int bonus);
 
-  // perft() is our utility to verify move generation. All the leaf nodes up
-  // to the given depth are generated and counted, and the sum is returned.
-  template<bool Root>
-  uint64_t perft(Position& pos, Depth depth) {
-
-    StateInfo st;
-    uint64_t cnt, nodes = 0;
-    const bool leaf = (depth == 2 * ONE_PLY);
-
-    for (const auto& m : MoveList<LEGAL>(pos))
-    {
-        if (Root && depth <= ONE_PLY)
-            cnt = 1, nodes++;
-        else
-        {
-            pos.do_move(m, st);
-            cnt = leaf ? MoveList<LEGAL>(pos).size() : perft<false>(pos, depth - ONE_PLY);
-            nodes += cnt;
-            pos.undo_move(m);
-        }
-        if (Root)
-            sync_cout << UCI::move(m, pos.is_chess960()) << ": " << cnt << sync_endl;
-    }
-    return nodes;
-  }
-
 } // namespace
 
 
 /// Search::init() is called during startup to initialize various lookup tables
 
-void Search::init() {
+void Search::init(bool OptioncleanSearch) {
 
+  cleanSearch = OptioncleanSearch;
+	
   for (int imp = 0; imp <= 1; ++imp)
       for (int d = 1; d < 128; ++d)
           for (int mc = 1; mc < 64; ++mc)
@@ -213,8 +193,10 @@ void Search::init() {
 /// Search::clear() resets search state to its initial value
 
 void Search::clear() {
+
   if (Options["NeverClearHash"])
 	return;
+
   Threads.main()->wait_for_search_finished();
 
   Time.availableNodes = 0;
@@ -228,29 +210,57 @@ void Search::clear() {
 }
 
 
+/// Search::perft() is our utility to verify move generation. All the leaf nodes
+/// up to the given depth are generated and counted, and the sum is returned.
+template<bool Root>
+uint64_t Search::perft(Position& pos, Depth depth) {
+
+  StateInfo st;
+  uint64_t cnt, nodes = 0;
+  const bool leaf = (depth == 2 * ONE_PLY);
+
+  for (const auto& m : MoveList<LEGAL>(pos))
+  {
+      if (Root && depth <= ONE_PLY)
+          cnt = 1, nodes++;
+      else
+      {
+          pos.do_move(m, st);
+          cnt = leaf ? MoveList<LEGAL>(pos).size() : perft<false>(pos, depth - ONE_PLY);
+          nodes += cnt;
+          pos.undo_move(m);
+      }
+      if (Root)
+          sync_cout << UCI::move(m, pos.is_chess960()) << ": " << cnt << sync_endl;
+  }
+  return nodes;
+}
+
+template uint64_t Search::perft<true>(Position&, Depth);
+
+
 /// MainThread::search() is called by the main thread when the program receives
 /// the UCI 'go' command. It searches from the root position and outputs the "bestmove".
 
 void MainThread::search() {
 
   static PolyglotBook book; // Defined static to initialize the PRNG only once
-  if (Limits.perft)
-  {
-      nodes = perft<true>(rootPos, Limits.perft * ONE_PLY);
-      sync_cout << "\nNodes searched: " << nodes << "\n" << sync_endl;
-      return;
-  }
-
   Color us = rootPos.side_to_move();
   Time.init(Limits, us, rootPos.game_ply());
   variety = Options["Variety"];
-  TT.new_search();
+  if (!Limits.infinite)
+	TT.new_search();
+  else
+	TT.infinite_search();
 
   int contempt = Options["Contempt"] * PawnValueEg / 100; // From centipawns
-  DrawValue[ us] = VALUE_DRAW - Value(contempt);
-  DrawValue[~us] = VALUE_DRAW + Value(contempt);
+  bool wc = Options["White_Contempt"];
+  DrawValue[wc ? WHITE : us] = VALUE_DRAW + Value(contempt);
+  DrawValue[wc ? BLACK :~us] = VALUE_DRAW - Value(contempt);
 
   // Read search options
+  bruteForce = Options["BruteForce"];
+  limitStrength = Options["UCI_LimitStrength"];
   doRazor = Options["Razoring"];
   doFutility = Options["Futility"];
   doNull = Options["NullMove"];
@@ -270,7 +280,7 @@ void MainThread::search() {
   {
       if (Options["OwnBook"] && !Limits.infinite && !Limits.mate)
       {
-          Move bookMove = book.probe(rootPos, Options["Book File"], Options["Best Book Move"]);
+          Move bookMove = book.probe(rootPos, Options["Book File"], Options["Best Book Line"]);
 
           if (bookMove && std::count(rootMoves.begin(), rootMoves.end(), bookMove))
           {
@@ -292,6 +302,22 @@ void MainThread::search() {
       }
       else
       {
+		  if (limitStrength)
+		  {
+			  
+			  int uci_elo = (Options["UCI_ELO"]);
+			  
+			  std::mt19937 gen(now());
+			  std::uniform_int_distribution<int> dis(-33, 33);
+			  int rand = dis(gen);
+			  uci_elo += rand;
+			  int NodesToSearch   = pow(1.005958946,(((uci_elo)/1500) - 1 )
+										+ (uci_elo - 1500)) * 32 ;
+			  Limits.nodes = NodesToSearch;
+			  
+			  Limits.nodes *= std::max(1,Time.optimum()/1000 );
+			  std::this_thread::sleep_for (std::chrono::seconds(Time.optimum()/1000) * (1 - Limits.nodes/724000));
+		  }
           for (Thread* th : Threads)
           if (th != this)
               th->start_searching();
@@ -300,11 +326,7 @@ void MainThread::search() {
       }
   }
 
-  // When playing in 'nodes as time' mode, subtract the searched nodes from
-  // the available ones before exiting.
-  if (Limits.npmsec)
-      Time.availableNodes += Limits.inc[us] - Threads.nodes_searched();
-  finalize:
+finalize:
   // When we reach the maximum depth, we can arrive here without a raise of
   // Threads.stop. However, if we are pondering or in an infinite search,
   // the UCI protocol states that we shouldn't print the best move before the
@@ -323,6 +345,11 @@ void MainThread::search() {
   for (Thread* th : Threads)
       if (th != this)
           th->wait_for_search_finished();
+
+  // When playing in 'nodes as time' mode, subtract the searched nodes from
+  // the available ones before exiting.
+  if (Limits.npmsec)
+      Time.availableNodes += Limits.inc[us] - Threads.nodes_searched();
 
   // Check if there are threads with a better score than main thread
   Thread* bestThread = this;
@@ -374,6 +401,9 @@ void Thread::search() {
   for (int i = 4; i > 0; i--)
      (ss-i)->contHistory = &this->contHistory[NO_PIECE][0]; // Use as sentinel
 
+  if (cleanSearch) 
+	  Search::clear();  
+  
   bestValue = delta1 = delta2 = alpha = -VALUE_INFINITE;
   beta = VALUE_INFINITE;
 
@@ -387,6 +417,9 @@ void Thread::search() {
 
   size_t multiPV = Options["MultiPV"];
   Skill skill(Options["Skill Level"]);
+  if(safetyEvaluator){
+	correspondenceMode=true;
+  }
   if (correspondenceMode) multiPV=256;
   // When playing with strength handicap enable MultiPV search that we will
   // use behind the scenes to retrieve a set of possible moves.
@@ -505,6 +538,12 @@ void Thread::search() {
 
       if (!mainThread)
           continue;
+	  if (Options["FastPlay"])
+		  {
+			  if ( Time.elapsed() > Time.optimum() / 256
+				  && ( abs(bestValue) > 12300 ||  abs(bestValue) >= VALUE_MATE_IN_MAX_PLY ))
+				  Threads.stop = true;
+		  }
 
       // If skill level is enabled and time is up, pick a sub-optimal best move
       if (skill.enabled() && skill.time_to_pick(rootDepth))
@@ -630,7 +669,7 @@ namespace {
     (ss+1)->ply = ss->ply + 1;
     ss->currentMove = (ss+1)->excludedMove = bestMove = MOVE_NONE;
     ss->contHistory = &thisThread->contHistory[NO_PIECE][0];
-    (ss+2)->killers[0] = (ss+2)->killers[1] = MOVE_NONE;
+    (ss+2)->killers[0] = (ss+2)->killers[1] = (ss+2)->killers[2] = (ss+2)->killers[3] = MOVE_NONE;
     Square prevSq = to_sq((ss-1)->currentMove);
 
     // Step 4. Transposition table lookup. We don't want the score of a partial
@@ -658,6 +697,14 @@ namespace {
             {
                 if (!pos.capture_or_promotion(ttMove))
                     update_stats(pos, ss, ttMove, nullptr, 0, stat_bonus(depth));
+                else if(type_of(ttMove) == PROMOTION || !pos.see_ge(ttMove, VALUE_ZERO))
+				{
+					if (ss->killers[2] != ttMove)
+					{
+						ss->killers[3] = ss->killers[2];
+						ss->killers[2] = ttMove;
+					}
+				}
 
                 // Extra penalty for a quiet TT move in previous ply when it gets refuted
                 if ((ss-1)->moveCount == 1 && !pos.captured_piece())
@@ -738,7 +785,7 @@ namespace {
         goto moves_loop;
 
     // Step 6. Razoring (skipped when in check)
-    if (    doRazor
+    if ( !bruteForce && doRazor
         && !PvNode
         &&  depth < 4 * ONE_PLY
         &&  eval + razor_margin[depth / ONE_PLY] <= alpha)
@@ -754,7 +801,7 @@ namespace {
 
     // Step 7. Futility pruning: child node (skipped when in check)
     
-    if (    doFutility
+    if ( !bruteForce && doFutility
         && !rootNode
         &&  depth < 7 * ONE_PLY
         &&  eval - futility_margin(depth) >= beta
@@ -806,7 +853,7 @@ namespace {
     // Step 9. ProbCut (skipped when in check)
     // If we have a good enough capture and a reduced search returns a value
     // much above beta, we can (almost) safely prune the previous move.
-    if (    doProbcut
+    if ( !bruteForce && doProbcut
         && !PvNode
         &&  depth >= 5 * ONE_PLY
         &&  abs(beta) < VALUE_MATE_IN_MAX_PLY)
@@ -854,6 +901,9 @@ moves_loop: // When in check search starts from here
     improving =   ss->staticEval >= (ss-2)->staticEval
             /* || ss->staticEval == VALUE_NONE Already implicit in the previous condition */
                ||(ss-2)->staticEval == VALUE_NONE;
+
+	bool greatlyImproving = (ss - 0)->staticEval > (ss - 2)->staticEval + 16
+		 && (ss - 2)->staticEval > (ss - 4)->staticEval + 16;
 
     singularExtensionNode =   !rootNode
                            &&  depth >= 8 * ONE_PLY
@@ -933,7 +983,7 @@ moves_loop: // When in check search starts from here
       newDepth = depth - ONE_PLY + extension;
 
       // Step 13. Pruning at shallow depth
-      if ( doPruning && !rootNode
+      if ( !bruteForce && doPruning && !rootNode
           && pos.non_pawn_material(pos.side_to_move())
           && bestValue > VALUE_MATED_IN_MAX_PLY)
       {
@@ -1005,7 +1055,7 @@ moves_loop: // When in check search starts from here
 
       // Step 15. Reduced depth search (LMR). If the move fails high it will be
       // re-searched at full depth.
-      if (    doLMR
+      if ( !bruteForce && doLMR
 	      &&  depth >= 3 * ONE_PLY
           &&  moveCount > 1
           && (!captureOrPromotion || moveCountPruning))
@@ -1058,14 +1108,26 @@ moves_loop: // When in check search starts from here
               r = std::max(DEPTH_ZERO, (r / ONE_PLY - ss->statScore / 20000) * ONE_PLY);
           }
 
-		  // The "correspondenceMode Mode" option looks Engine to look at more positions per search depth, but Engine will play
+		  // Set maximum reduction
+          r = std::min(r, maxLMR);
+		  
+          // The "correspondenceMode Mode" option looks Engine to look at more positions per search depth, but Engine will play
           // weaker overall.  It also sets the "MultiPV" option to 256 to allow Engine to look at more nodes per
           // depth and may help in analysis.
+		  if(safetyEvaluator){
+			correspondenceMode=true;
+		  }
 		  if ( ( ss->ply < depth / 2 - ONE_PLY) && correspondenceMode )
 		    r = DEPTH_ZERO;
+		
+
           Depth d = std::max(newDepth - r, ONE_PLY);
 
-          value = -search<NonPV>(pos, ss+1, -(alpha+1), -alpha, d, true, false);
+		  bool foo = PvNode && !moveCountPruning && greatlyImproving && ss->staticEval > alpha;
+		  // && "iteration depth" >= 10 * ONE_PLY;
+		  // or && "iteration depth" >= 4 * ONE_PLY
+
+          value = -search<NonPV>(pos, ss+1, -(alpha+1), -alpha, d, true, foo);
 
           doFullDepthSearch = (value > alpha && d != newDepth);
       }
@@ -1183,6 +1245,15 @@ moves_loop: // When in check search starts from here
         // Quiet best move: update move sorting heuristics
         if (!pos.capture_or_promotion(bestMove))
             update_stats(pos, ss, bestMove, quietsSearched, quietCount, stat_bonus(depth));
+        else if(type_of(bestMove) == PROMOTION || quietCount > 3)
+		{
+			if (ss->killers[2] != bestMove)
+			{
+				ss->killers[3] = ss->killers[2];
+				ss->killers[2] = bestMove;
+			}
+		}
+
 
         // Extra penalty for a quiet TT move in previous ply when it gets refuted
         if ((ss-1)->moveCount == 1 && !pos.captured_piece())
@@ -1328,8 +1399,9 @@ moves_loop: // When in check search starts from here
       if (   !InCheck
           && !givesCheck
           &&  futilityBase > -VALUE_KNOWN_WIN
-		  && type_of(move) == NORMAL)
+          && !pos.advanced_pawn_push(move))
       {
+          assert(type_of(move) != ENPASSANT); // Due to !pos.advanced_pawn_push
 
           futilityValue = futilityBase + PieceValue[EG][pos.piece_on(to_sq(move))];
 
@@ -1522,7 +1594,7 @@ moves_loop: // When in check search starts from here
         int push = (  weakness * int(topScore - rootMoves[i].score)
                     + delta * (rng.rand<unsigned>() % weakness)) / 128;
 
-        if (rootMoves[i].score + push >= maxScore)
+        if (rootMoves[i].score + push > maxScore)
         {
             maxScore = rootMoves[i].score + push;
             best = rootMoves[i].pv[0];

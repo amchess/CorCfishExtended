@@ -438,7 +438,7 @@ Move PolyglotBook::probe(const Position& pos, const string& fName, bool pickBest
 
   // Add 'special move' flags and verify it is legal
   for (const auto& m : MoveList<LEGAL>(pos))
-      if (move == (m ^ type_of(m)))
+      if (move == (Move(m) ^ Move(type_of(m))))
           return m;
 
   return MOVE_NONE;

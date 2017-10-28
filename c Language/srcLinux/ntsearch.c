@@ -211,7 +211,7 @@ Value search_NonPV(Pos *pos, Stack *ss, Value alpha, Depth depth, int cutNode)
     goto moves_loop;
 
   // Step 6. Razoring (skipped when in check)
-  if ( option_value(OPT_RAZORING) && !PvNode
+  if ( !option_value(OPT_BRUTEFORCE) && option_value(OPT_RAZORING) && !PvNode
       &&  depth < 4 * ONE_PLY
       &&  eval + razor_margin[depth / ONE_PLY] <= alpha)
   {
@@ -225,7 +225,7 @@ Value search_NonPV(Pos *pos, Stack *ss, Value alpha, Depth depth, int cutNode)
   }
 
   // Step 7. Futility pruning: child node (skipped when in check)
-  if ( option_value(OPT_FUTILITY) && !rootNode
+  if ( !option_value(OPT_BRUTEFORCE) && option_value(OPT_FUTILITY) && !rootNode
       &&  depth < 7 * ONE_PLY
       &&  eval - futility_margin(depth) >= beta
       &&  eval < VALUE_KNOWN_WIN  // Do not return unproven wins
@@ -282,7 +282,7 @@ Value search_NonPV(Pos *pos, Stack *ss, Value alpha, Depth depth, int cutNode)
   // Step 9. ProbCut (skipped when in check)
   // If we have a good enough capture and a reduced search returns a value
   // much above beta, we can (almost) safely prune the previous move.
-  if ( option_value(OPT_PROBCUT) && !PvNode
+  if ( !option_value(OPT_BRUTEFORCE) && option_value(OPT_PROBCUT) && !PvNode
       &&  depth >= 5 * ONE_PLY
       &&  abs(beta) < VALUE_MATE_IN_MAX_PLY)
   {
@@ -433,7 +433,7 @@ moves_loop: // When in check search starts from here.
     newDepth = depth - ONE_PLY + extension;
 
     // Step 13. Pruning at shallow depth
-    if ( option_value(OPT_PRUNING) && !rootNode
+    if ( !option_value(OPT_BRUTEFORCE) && option_value(OPT_PRUNING) && !rootNode
         &&  pos_non_pawn_material(pos_stm())
         &&  bestValue > VALUE_MATED_IN_MAX_PLY)
     {
@@ -502,7 +502,7 @@ moves_loop: // When in check search starts from here.
 
     // Step 15. Reduced depth search (LMR). If the move fails high it will be
     // re-searched at full depth.
-    if (    depth >= 3 * ONE_PLY
+    if (    !option_value(OPT_BRUTEFORCE) && depth >= 3 * ONE_PLY
         &&  moveCount > 1
         && (!captureOrPromotion || moveCountPruning))
     {

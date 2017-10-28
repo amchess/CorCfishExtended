@@ -28,6 +28,7 @@
 #include "evaluate.h"
 #include "material.h"
 #include "pawns.h"
+#include "uci.h"
 
 namespace {
 
@@ -87,7 +88,7 @@ namespace {
 
   public:
     Evaluation() = delete;
-    Evaluation(const Position& p) : pos(p) {}
+    Evaluation(const Position& p) : pos(p) {};
     Evaluation& operator=(const Evaluation&) = delete;
 
     Value value();
@@ -834,12 +835,20 @@ namespace {
     // Initialize score by reading the incrementally updated scores included in
     // the position object (material + piece square tables) and the material
     // imbalance. Score is computed internally from the white point of view.
-    Score score = pos.psq_score() + me->imbalance();
-
-    // Probe the pawn hash table
-    pe = Pawns::probe(pos);
-    score += pe->pawns_score();
-
+    Score score=SCORE_ZERO;
+	bool safetyEvaluator=Options["Safety Evaluator"]; 
+	if(!safetyEvaluator){
+		score= pos.psq_score() + me->imbalance();
+		// Probe the pawn hash table
+		pe = Pawns::probe(pos);
+		if(!safetyEvaluator){
+			score += pe->pawns_score();
+		}
+    }
+	else{
+		// Probe the pawn hash table
+		pe = Pawns::probe(pos);
+	}
     Value v;
 
     // Main evaluation begins here
@@ -847,12 +856,12 @@ namespace {
     initialize<WHITE>();
     initialize<BLACK>();
 
-    score += evaluate_pieces<WHITE, KNIGHT>() - evaluate_pieces<BLACK, KNIGHT>();
-    score += evaluate_pieces<WHITE, BISHOP>() - evaluate_pieces<BLACK, BISHOP>();
-    score += evaluate_pieces<WHITE, ROOK  >() - evaluate_pieces<BLACK, ROOK  >();
-    score += evaluate_pieces<WHITE, QUEEN >() - evaluate_pieces<BLACK, QUEEN >();
-
-    score += mobility[WHITE] - mobility[BLACK];
+		
+	score += evaluate_pieces<WHITE, KNIGHT>() - evaluate_pieces<BLACK, KNIGHT>();
+	score += evaluate_pieces<WHITE, BISHOP>() - evaluate_pieces<BLACK, BISHOP>();
+	score += evaluate_pieces<WHITE, ROOK  >() - evaluate_pieces<BLACK, ROOK  >();
+	score += evaluate_pieces<WHITE, QUEEN >() - evaluate_pieces<BLACK, QUEEN >();
+	score += mobility[WHITE] - mobility[BLACK];
 
     score +=  evaluate_king<WHITE>()
             - evaluate_king<BLACK>();
@@ -860,15 +869,14 @@ namespace {
     score +=  evaluate_threats<WHITE>()
             - evaluate_threats<BLACK>();
 
-    score +=  evaluate_passed_pawns<WHITE>()
+    if(!safetyEvaluator){
+		score +=  evaluate_passed_pawns<WHITE>()
             - evaluate_passed_pawns<BLACK>();
-
-    if (pos.non_pawn_material() >= SpaceThreshold)
-        score +=  evaluate_space<WHITE>()
-                - evaluate_space<BLACK>();
-
-    score += evaluate_initiative(eg_value(score));
-
+		if (pos.non_pawn_material() >= SpaceThreshold)
+			score +=  evaluate_space<WHITE>()
+					- evaluate_space<BLACK>();
+		score += evaluate_initiative(eg_value(score));
+    } 
     // Interpolate between a middlegame and a (scaled by 'sf') endgame score
     ScaleFactor sf = evaluate_scale_factor(eg_value(score));
     v =  mg_value(score) * int(me->game_phase())
@@ -879,13 +887,30 @@ namespace {
     // In case of tracing add all remaining individual evaluation terms
     if (T)
     {
-        Trace::add(MATERIAL, pos.psq_score());
-        Trace::add(IMBALANCE, me->imbalance());
-        Trace::add(PAWN, pe->pawns_score());
-        Trace::add(MOBILITY, mobility[WHITE], mobility[BLACK]);
+        if(!safetyEvaluator){
+			Trace::add(MATERIAL, pos.psq_score());
+			Trace::add(IMBALANCE, me->imbalance());
+			Trace::add(PAWN, pe->pawns_score());
+			Trace::add(MOBILITY, mobility[WHITE], mobility[BLACK]);
+		}
+		else{
+			Trace::add(MATERIAL, SCORE_ZERO);
+			Trace::add(IMBALANCE, SCORE_ZERO);
+			Trace::add(PAWN, SCORE_ZERO);
+			Trace::add(MOBILITY, SCORE_ZERO, SCORE_ZERO);
+		}
+        
+        
+        
         if (pos.non_pawn_material() >= SpaceThreshold)
-            Trace::add(SPACE, evaluate_space<WHITE>()
+            if(!safetyEvaluator){
+				Trace::add(SPACE, evaluate_space<WHITE>()
                             , evaluate_space<BLACK>());
+			}
+			else{
+				Trace::add(SPACE, SCORE_ZERO
+                            , SCORE_ZERO);			
+			}
         Trace::add(TOTAL, score);
     }
 

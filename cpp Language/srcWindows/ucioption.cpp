@@ -74,57 +74,68 @@ void init(OptionsMap& o) {
   if (!n) n = 1;
 
   o["Debug Log File"]          << Option("", on_logger);
-  o["Contempt"]                << Option(0, -100, 100);
+  o["Contempt"]               << Option(0, -300, 300);
+  o["White_Contempt"]         << Option(0, -300, 300);
   o["Threads"]                 << Option(n, 1, 512, on_threads);
   o["Hash"]                    << Option(128, 1, MaxHashMB, on_hash_size);
   o["Clear Hash"]              << Option(on_clear_hash);
   o["Ponder"]                  << Option(false);
   o["MultiPV"]                 << Option(1, 1, 500);
   o["Skill Level"]             << Option(20, 0, 20);
+  //Time manager
+  o["Time manager"]          << Option();
+  o["Move Overhead"]           << Option(100, 0, 5000);
+  o["Minimum Thinking Time"]    << Option(20, 0, 5000);
+  o["Slow Mover"]               << Option(89, 10, 1000);
+  o["nodestime"]               << Option(0, 0, 10000);
+  o["FastPlay"]                << Option(false);
+  //Hash file management
+  o["Hash file management"]          << Option();
   o["NeverClearHash"]		   << Option(false);
   o["HashFile"]		           << Option("hash.hsh", on_HashFile);
   o["SaveHashtoFile"]		   << Option(SaveHashtoFile);
   o["LoadHashfromFile"]		   << Option(LoadHashfromFile);
   o["LoadEpdToHash"]            << Option(LoadEpdToHash);
-  o["Best Book Move"]          << Option(false);
-  o["Book File"]               << Option("book.bin");
-  o["Move Overhead"]           << Option(100, 0, 5000);
-  o["nodestime"]               << Option(0, 0, 10000);
-  o["UCI_Chess960"]            << Option(false);
-  o["Large Pages"]             << Option(true, on_large_pages);
+  o["UCI_Chess960"]            << Option(false); 
+  //Sygyzy section
+  o["Sygyzy section"]          << Option();
   o["SyzygyPath"]              << Option("<empty>", on_tb_path);
   o["SyzygyProbeDepth"]        << Option(1, 1, 100);
   o["Syzygy50MoveRule"]        << Option(true);
   o["SyzygyProbeLimit"]        << Option(6, 0, 6);
-  o["Cerebellum Library"]      << Option();
 
-  
+  o["Large Pages"]             << Option(true, on_large_pages);
   //Correspondence section
   o["Correspondence Chess Analyzer"]     << Option();
   o["Analysis Mode"]     << Option(false);
+  o["BruteForce"]            << Option(false);
   o["NullMove"]                << Option(true);
   o["Clean Search"]            << Option(false);
-  
-  //Shashin section
-  o["Shashin model"]     << Option();
-  o["Safety Evaluator"]        << Option(false);
-
+  o["Variety"]               << Option (0, 0, 8);
   //Polyglot Book management
   o["Polyglot Book management"] << Option();
-  o["OwnBook"]                  << Option(false);
-  o["Best Book Move"]           << Option(false);
-  o["Book File"]                << Option("book.bin");  //Cerebellum Book Library
+  o["Best Book Move"]          << Option(false);
+  o["Book File"]               << Option("book.bin");
 
+  //Strength reduction section
+  o["Strength reduction section"]          << Option();
+  o["UCI_LimitStrength"]     << Option(false);
+  o["UCI_ELO"]               << Option(1500, 1500, 2800);
+
+  //Cerebellum Book Library
   o["Cerebellum Library"]       << Option();
   o["Book Move2 Probability"]   << Option(0, 0, 100, on_book_move2_prob);
   o["BookPath"]                 << Option("Cerebellum_Light.bin", on_brainbook_path);
   
-  o["Advanced Features"]      << Option();
+  //Shashin section
+  o["Shashin model"]     << Option();
+  o["Safety Evaluator"]        << Option(false);
+  
+  o["Advanced search options"]      << Option();
   o["Razoring"]               << Option(true);
   o["Futility"]               << Option(true);
   o["Pruning"]                << Option(true);
   o["ProbCut"]                << Option(true);
-  o["Variety"]               << Option (0, 0, 8);
   o["LMR"]                    << Option(true);
   o["MaxLMReduction"]         << Option(10, 0, 20);
 

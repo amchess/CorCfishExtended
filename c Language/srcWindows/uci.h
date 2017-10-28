@@ -31,39 +31,41 @@ typedef struct Option Option;
 typedef void (*OnChange)(Option *);
 
 // no options are of type combo
+
 #define OPT_TYPE_CHECK    0
 #define OPT_TYPE_SPIN     1
 #define OPT_TYPE_BUTTON   2
 #define OPT_TYPE_STRING   3
 #define OPT_TYPE_DISABLED 4
 
-#define OPT_CORRESPONDENCEMODE    0
-#define OPT_CLEAN_SEARCH    1
-#define OPT_RAZORING        2
-#define OPT_FUTILITY        3
-#define OPT_PRUNING         4
-#define OPT_NULLMOVE        5
-#define OPT_PROBCUT         6
-#define OPT_DEBUG_LOG_FILE  7
-#define OPT_CONTEMPT        8
-#define OPT_THREADS         9
-#define OPT_HASH            10
-#define OPT_CLEAR_HASH      11
-#define OPT_PONDER          12
-#define OPT_MULTI_PV        13
-#define OPT_REP_FIX         14
-#define OPT_SKILL_LEVEL     15
-#define OPT_MOVE_OVERHEAD   16
-#define OPT_NODES_TIME      17
-#define OPT_CHESS960        18
-#define OPT_SYZ_PATH        19
-#define OPT_SYZ_PROBE_DEPTH 20
-#define OPT_SYZ_50_MOVE     21
-#define OPT_SYZ_PROBE_LIMIT 22
-#define OPT_SYZ_USE_DTM     23
-#define OPT_LARGE_PAGES     24
-#define OPT_VARIETY         25
-#define OPT_NUMA            26
+#define OPT_DEBUG_LOG_FILE  0
+#define OPT_CONTEMPT        1
+#define OPT_THREADS         2
+#define OPT_HASH            3
+#define OPT_CLEAR_HASH      4
+#define OPT_PONDER          5
+#define OPT_MULTI_PV        6
+#define OPT_SKILL_LEVEL     7
+#define OPT_MOVE_OVERHEAD   8
+#define OPT_NODES_TIME      9
+#define OPT_CHESS960        10
+#define OPT_SYZ_PATH        11
+#define OPT_SYZ_PROBE_DEPTH 12
+#define OPT_SYZ_50_MOVE     13
+#define OPT_SYZ_PROBE_LIMIT 14
+#define OPT_SYZ_USE_DTM     15
+#define OPT_LARGE_PAGES     16
+#define OPT_CORRESPONDENCEMODE    17
+#define OPT_BRUTEFORCE    18
+#define OPT_NULLMOVE       19
+#define OPT_CLEAN_SEARCH    20
+#define OPT_VARIETY         21
+#define OPT_RAZORING        22
+#define OPT_FUTILITY        23
+#define OPT_PRUNING         24
+#define OPT_PROBCUT         25
+#define OPT_REP_FIX         26
+#define OPT_NUMA            27
 
 struct Option {
   char *name;

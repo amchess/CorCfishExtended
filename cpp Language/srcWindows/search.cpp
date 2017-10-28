@@ -24,6 +24,7 @@
 #include <cstring>   // For std::memset
 #include <iostream>
 #include <sstream>
+#include <random>
 
 #include "book.h"
 #include "tzbook.h"
@@ -144,7 +145,7 @@ namespace {
   int variety;
   bool correspondenceMode = Options["Analysis Mode"];
   bool safetyEvaluator=Options["Safety Evaluator"];
-  bool doRazor, doFutility, doPruning, doNull, doProbcut, doLMR;
+  bool bruteForce,limitStrength,doRazor, doFutility, doPruning, doNull, doProbcut, doLMR;
   Depth maxLMR;
   template <NodeType NT>
   Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, bool cutNode, bool skipEarlyPruning);
@@ -253,10 +254,13 @@ void MainThread::search() {
 	TT.infinite_search();
 
   int contempt = Options["Contempt"] * PawnValueEg / 100; // From centipawns
-  DrawValue[ us] = VALUE_DRAW - Value(contempt);
-  DrawValue[~us] = VALUE_DRAW + Value(contempt);
+  bool wc = Options["White_Contempt"];
+  DrawValue[wc ? WHITE : us] = VALUE_DRAW + Value(contempt);
+  DrawValue[wc ? BLACK :~us] = VALUE_DRAW - Value(contempt);
 
   // Read search options
+  bruteForce = Options["BruteForce"];
+  limitStrength = Options["UCI_LimitStrength"];
   doRazor = Options["Razoring"];
   doFutility = Options["Futility"];
   doNull = Options["NullMove"];
@@ -298,6 +302,22 @@ void MainThread::search() {
       }
       else
       {
+		  if (limitStrength)
+		  {
+			  
+			  int uci_elo = (Options["UCI_ELO"]);
+			  
+			  std::mt19937 gen(now());
+			  std::uniform_int_distribution<int> dis(-33, 33);
+			  int rand = dis(gen);
+			  uci_elo += rand;
+			  int NodesToSearch   = pow(1.005958946,(((uci_elo)/1500) - 1 )
+										+ (uci_elo - 1500)) * 32 ;
+			  Limits.nodes = NodesToSearch;
+			  
+			  Limits.nodes *= std::max(1,Time.optimum()/1000 );
+			  std::this_thread::sleep_for (std::chrono::seconds(Time.optimum()/1000) * (1 - Limits.nodes/724000));
+		  }
           for (Thread* th : Threads)
           if (th != this)
               th->start_searching();
@@ -518,6 +538,12 @@ void Thread::search() {
 
       if (!mainThread)
           continue;
+	  if (Options["FastPlay"])
+		  {
+			  if ( Time.elapsed() > Time.optimum() / 256
+				  && ( abs(bestValue) > 12300 ||  abs(bestValue) >= VALUE_MATE_IN_MAX_PLY ))
+				  Threads.stop = true;
+		  }
 
       // If skill level is enabled and time is up, pick a sub-optimal best move
       if (skill.enabled() && skill.time_to_pick(rootDepth))
@@ -759,7 +785,7 @@ namespace {
         goto moves_loop;
 
     // Step 6. Razoring (skipped when in check)
-    if (    doRazor
+    if ( !bruteForce && doRazor
         && !PvNode
         &&  depth < 4 * ONE_PLY
         &&  eval + razor_margin[depth / ONE_PLY] <= alpha)
@@ -775,7 +801,7 @@ namespace {
 
     // Step 7. Futility pruning: child node (skipped when in check)
     
-    if (    doFutility
+    if ( !bruteForce && doFutility
         && !rootNode
         &&  depth < 7 * ONE_PLY
         &&  eval - futility_margin(depth) >= beta
@@ -827,7 +853,7 @@ namespace {
     // Step 9. ProbCut (skipped when in check)
     // If we have a good enough capture and a reduced search returns a value
     // much above beta, we can (almost) safely prune the previous move.
-    if (    doProbcut
+    if ( !bruteForce && doProbcut
         && !PvNode
         &&  depth >= 5 * ONE_PLY
         &&  abs(beta) < VALUE_MATE_IN_MAX_PLY)
@@ -957,7 +983,7 @@ moves_loop: // When in check search starts from here
       newDepth = depth - ONE_PLY + extension;
 
       // Step 13. Pruning at shallow depth
-      if ( doPruning && !rootNode
+      if ( !bruteForce && doPruning && !rootNode
           && pos.non_pawn_material(pos.side_to_move())
           && bestValue > VALUE_MATED_IN_MAX_PLY)
       {
@@ -1029,7 +1055,7 @@ moves_loop: // When in check search starts from here
 
       // Step 15. Reduced depth search (LMR). If the move fails high it will be
       // re-searched at full depth.
-      if (    doLMR
+      if ( !bruteForce && doLMR
 	      &&  depth >= 3 * ONE_PLY
           &&  moveCount > 1
           && (!captureOrPromotion || moveCountPruning))
@@ -1082,6 +1108,8 @@ moves_loop: // When in check search starts from here
               r = std::max(DEPTH_ZERO, (r / ONE_PLY - ss->statScore / 20000) * ONE_PLY);
           }
 
+		  // Set maximum reduction
+          r = std::min(r, maxLMR);
 		  
           // The "correspondenceMode Mode" option looks Engine to look at more positions per search depth, but Engine will play
           // weaker overall.  It also sets the "MultiPV" option to 256 to allow Engine to look at more nodes per
