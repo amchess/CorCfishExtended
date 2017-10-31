@@ -210,27 +210,29 @@ Value search_NonPV(Pos *pos, Stack *ss, Value alpha, Depth depth, int cutNode)
   if (ss->skipEarlyPruning)
     goto moves_loop;
 
-  // Step 6. Razoring (skipped when in check)
-  if ( !option_value(OPT_BRUTEFORCE) && option_value(OPT_RAZORING) && !PvNode
-      &&  depth < 4 * ONE_PLY
-      &&  eval + razor_margin[depth / ONE_PLY] <= alpha)
-  {
-    if (depth <= ONE_PLY)
-      return qsearch_NonPV_false(pos, ss, alpha, DEPTH_ZERO);
+  if ( !option_value(OPT_BRUTEFORCE)){
+	  // Step 6. Razoring (skipped when in check)  
+	  if ( option_value(OPT_RAZORING) && !PvNode
+		  &&  depth < 4 * ONE_PLY
+		  &&  eval + razor_margin[depth / ONE_PLY] <= alpha)
+	  {
+		if (depth <= ONE_PLY)
+		  return qsearch_NonPV_false(pos, ss, alpha, DEPTH_ZERO);
 
-    Value ralpha = alpha - razor_margin[depth / ONE_PLY];
-    Value v = qsearch_NonPV_false(pos, ss, ralpha, DEPTH_ZERO);
-    if (v <= ralpha)
-      return v;
+		Value ralpha = alpha - razor_margin[depth / ONE_PLY];
+		Value v = qsearch_NonPV_false(pos, ss, ralpha, DEPTH_ZERO);
+		if (v <= ralpha)
+		  return v;
+	  }
+
+	  // Step 7. Futility pruning: child node (skipped when in check)
+	  if (option_value(OPT_FUTILITY) && !rootNode
+		  &&  depth < 7 * ONE_PLY
+		  &&  eval - futility_margin(depth) >= beta
+		  &&  eval < VALUE_KNOWN_WIN  // Do not return unproven wins
+		  &&  pos_non_pawn_material(pos_stm()))
+		return eval; // - futility_margin(depth); (do not do the right thing)  
   }
-
-  // Step 7. Futility pruning: child node (skipped when in check)
-  if ( !option_value(OPT_BRUTEFORCE) && option_value(OPT_FUTILITY) && !rootNode
-      &&  depth < 7 * ONE_PLY
-      &&  eval - futility_margin(depth) >= beta
-      &&  eval < VALUE_KNOWN_WIN  // Do not return unproven wins
-      &&  pos_non_pawn_material(pos_stm()))
-    return eval; // - futility_margin(depth); (do not do the right thing)
 
   // Step 8. Null move search with verification search (is omitted in PV nodes)
 	ExtMove list[MAX_MOVES];

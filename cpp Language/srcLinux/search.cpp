@@ -1,5 +1,5 @@
 /*
-  Stockfish, a UCI chess playing engine derived from Glaurung 2.1
+	Stockfish, a UCI chess playing engine derived from Glaurung 2.1
   Copyright (C) 2004-2008 Tord Romstad (Glaurung author)
   Copyright (C) 2008-2015 Marco Costalba, Joona Kiiski, Tord Romstad
   Copyright (C) 2015-2017 Marco Costalba, Joona Kiiski, Gary Linscott, Tord Romstad
@@ -784,30 +784,34 @@ namespace {
     if (skipEarlyPruning)
         goto moves_loop;
 
-    // Step 6. Razoring (skipped when in check)
-    if ( !bruteForce && doRazor
-        && !PvNode
-        &&  depth < 4 * ONE_PLY
-        &&  eval + razor_margin[depth / ONE_PLY] <= alpha)
-    {
-        if (depth <= ONE_PLY)
-            return qsearch<NonPV, false>(pos, ss, alpha, alpha+1);
 
-        Value ralpha = alpha - razor_margin[depth / ONE_PLY];
-        Value v = qsearch<NonPV, false>(pos, ss, ralpha, ralpha+1);
-        if (v <= ralpha)
-            return v;
-    }
+	if ( !bruteForce){
+		// Step 6. Razoring (skipped when in check)
+		if ( doRazor
+				&& !PvNode
+				&&  depth < 4 * ONE_PLY
+				&&  eval + razor_margin[depth / ONE_PLY] <= alpha)
+			{
+				if (depth <= ONE_PLY)
+					return qsearch<NonPV, false>(pos, ss, alpha, alpha+1);
 
-    // Step 7. Futility pruning: child node (skipped when in check)
-    
-    if ( !bruteForce && doFutility
-        && !rootNode
-        &&  depth < 7 * ONE_PLY
-        &&  eval - futility_margin(depth) >= beta
-        &&  eval < VALUE_KNOWN_WIN  // Do not return unproven wins
-        &&  pos.non_pawn_material(pos.side_to_move()))
-        return eval;
+				Value ralpha = alpha - razor_margin[depth / ONE_PLY];
+				Value v = qsearch<NonPV, false>(pos, ss, ralpha, ralpha+1);
+				if (v <= ralpha)
+					return v;
+			}
+		
+		// Step 7. Futility pruning: child node (skipped when in check)
+		
+		if ( doFutility
+			&& !rootNode
+			&&  depth < 7 * ONE_PLY
+			&&  eval - futility_margin(depth) >= beta
+			&&  eval < VALUE_KNOWN_WIN  // Do not return unproven wins
+			&&  pos.non_pawn_material(pos.side_to_move()))
+			return eval;	
+	}
+
 
     // Step 8. Null move search with verification search (is omitted in PV nodes)
     if (    doNull
