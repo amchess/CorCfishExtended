@@ -1,8 +1,8 @@
-3r2k1/pr6/1p2q2p/5R2/3P3p/8/5RP1/3Q2K1 w - - 0 1 bm d5; id="Komodo-Houdini TCEC 10"
+3r2k1/pr6/1p2q2p/5R2/3P3p/8/5RP1/3Q2K1 w - - bm d5; id="Komodo-Houdini TCEC 10"
 2q2r2/3n1p2/p2p2k1/3PpRp1/P1n1P3/2P2QB1/1rB1R1P1/6K1 w - - acd 25; bm Rxg5+; c3 "Rxg5+"; ce 32744; dm 12; id "Arasan16.003"; pm Rxg5+;
 n1QBq1k1/5p1p/5KP1/p7/8/8/8/8 w - - acd 25; bm Bc7; c0 "
 r1bqkb1r/ppp3pp/n3pn2/1N1p1p2/3P1B2/4P3/PPP2PPP/R2QKBNR w KQkq - bm c4;
-r3kr2/pp2bpp1/2b4p/q3p3/2B1p1PP/1Q2B3/PPP2P2/2KR2R1 w q bm Rd5;
+r3kr2/pp2bpp1/2b4p/q3p3/2B1p1PP/1Q2B3/PPP2P2/2KR2R1 w q - bm Rd5; 
 r7/1QP1N1Kp/pn2P1b1/Nnk2p2/7p/p4BP1/1rPPp2q/8 w - - acd 27; bm Nd5 Qxa8;
 8/8/7K/8/p1p5/2Bp4/pn1N4/k3N3 w - - acd 27; bm Nxd3; c0 "
 8/7p/5P1k/1p5P/5p2/2p1p3/P1P1P1P1/1K3Nb1 w - - bm Ng3; id="ERET 032"
@@ -42,7 +42,7 @@ rq6/5k2/p3pP1p/3p2p1/6PP/1PB1Q3/2P5/1K6 w - - bm Qd3; id="ERET 059"
 4kb1r/2q2ppb/p2pp2p/5P2/NrPB2P1/1P3Q2/1K1R3P/7R w k - id ?; bm fxe6;
 4kr2/5p1K/3p1Q2/1p4P1/4P3/1PP5/7b/8 w - - bm Kh6; c1 "diff=9";
 4r2r/pppkq1pp/2n1pn2/4p1B1/4N2Q/8/PPP3PP/4RRK1 w - - bm Nxf6+;
-4rrk1/p1q1bpp1/b1n1p2p/1pppP1N1/n4B1P/3P2P1/PPP1QPBN/R3R1K1 w - - 0 1 bm Qh5;
+4rrk1/p1q1bpp1/b1n1p2p/1pppP1N1/n4B1P/3P2P1/PPP1QPBN/R3R1K1 w - - bm Qh5;
 5kN1/3p1q2/5P2/5PP1/2pK4/1p1R4/1P6/8 w - - bm Rxb3; c1 "diff=6";
 5nr1/2Pp2pk/3Pp1p1/4P1P1/6P1/5K2/8/7n w - - id ?; bm c8N;
 5rk1/2p2Rpq/p2p2n1/2pPpQPp/4P2P/3P2N1/PP6/6K1 w - - bm Qe6; c1 "diff=7";
@@ -71,21 +71,21 @@ k7/p1pR4/1p3p2/2P2rpB/PbP4p/2N1p2p/KP6/8 w - - bm Bf3; c1 "diff=7";
 kr1b4/p1p2B2/2p5/2p1p3/KpP1P3/1P4N1/8/7R w - - id ?; bm Rh6;
 q1r5/k3ppp1/2R5/PP1KP2r/2p4Q/2p1p3/5pP1/3R4 w - - id ?; bm Qd4+;
 q7/b1p5/kp1p4/p2PN3/PPP5/1K6/8/5B2 w - - bm c5+; c1 "diff=7";
-r1b1k1r1/1p2np1p/p1n1pQp1/3p4/3NPP2/P2RB3/2PK2PP/q4B1R w q d6 bm Be2; c1 "diff=6";
+r1b1k1r1/1p2np1p/p1n1pQp1/3p4/3NPP2/P2RB3/2PK2PP/q4B1R w q - bm Be2;
 r1b1r2k/pp1n1pp1/1qpb3p/8/3PB2B/5N2/PPQ2PPP/R3R1K1 w - - bm Bg6; c1 "diff=9";
 r1b2rk1/2q1bppp/p2pp3/2n3PQ/1p1BP3/1BN5/PPP2P1P/2KR2R1 w - - bm Bf6; c1 "diff=7";
 r1b3k1/ppp1q1pp/2n1p3/3pP2P/8/2NB2Q1/PPP3P1/2K2R2 w - - bm Bg6; c0 "Hector-So, 19th Sigeman & Co., Malmo 2011";
 r1b3kr/pp1n2Bp/2pb2q1/3p3N/3P4/2P2Q2/P1P3PP/4RRK1 w - - bm Re5; id "arasan19.124"; c0 "Orcrist-Crafty, ICC 2011";
 r1b3r1/5p1k/p1n2P1p/P1qpp1P1/1p1p4/3P2Q1/BPPB2P1/R4RK1 w - - bm Kf2; id "arasan19.179"; c0 "Efremov-Fischer, Danube/4 ICCF 2012";
 r1bq1rk1/1p1nbppp/p3p3/2ppP3/5B1P/2PBP3/PP1N1PP1/R2QK2R w - - bm Bxh7+;
-r1bq1rk1/pp1n1pp1/4pn1p/2p3B1/3P4/P1PB1N2/2P3PP/R3QRK1 w - - bm Qh4; c1 "diff=6";
-r1bqn1nk/ppp4p/3p4/3Pp1r1/2P1Pp2/2NB1P2/PP2N3/2K1Q1RR w - -  bm Rxh7; c1 "diff=5";
+r1bq1rk1/pp1n1pp1/4pn1p/2p3B1/3P4/P1PB1N2/2P3PP/R3QRK1 w - - bm Qh4; 
+r1bqn1nk/ppp4p/3p4/3Pp1r1/2P1Pp2/2NB1P2/PP2N3/2K1Q1RR w - - bm Rxh7;
 r1bqr1k1/3n1ppp/p2p1b2/3N1PP1/1p1B1P2/1P6/1PP1Q2P/2KR2R1 w - - bm Qxe8+;
 r1q2rk1/ppp1bp2/6p1/3pNPn1/7p/2PP3P/P6B/1R1Q1RK1 w - - bm f6; c1 "diff=6";
 r2br1k1/1b3q1p/pp1p1ppB/3Nn3/n1PNP2R/4Q3/1P2B1PP/5R1K w - - bm Nf5;
 r2q1r2/1b2bpkp/p3p1p1/2ppP1P1/7R/1PN1BQR1/1PP2P1P/4K3 w - - bm Qf6+; id "arasan19.132"; c0 "Asauskas-Malisauskas, Vilnius 2004";
 r2q1rk1/ppp2p2/3p1np1/4pNQ1/4P1pP/1PPP4/1P3P2/R3K1R1 w Q - bm Qh6; c1 "diff=8";
-r2qkb1r/3bpppp/p4nn1/3P4/1p1N4/1QN3B1/PP3PPP/R3KB1R w KQkq  - bm Nc6; c1 "diff=6";
+r2qkb1r/3bpppp/p4nn1/3P4/1p1N4/1QN3B1/PP3PPP/R3KB1R w KQkq - bm Nc6; c1 "diff=6";
 r2qnrk1/p4pp1/1p2b2p/2p1Pp2/2P5/PnPB1QN1/6PP/R1B2RK1 w - - bm Bxh6; c0 "Domangala-Leszek, Super Puchar cr 2003";
 r2qrbk1/1b3p2/3p2pB/1p1P1N2/1np1P3/5NRP/1P3PP1/1B1Qn1K1 w - - id ?; bm N3h4;
 r3nrk1/5pB1/p2q1P1b/1p2P3/3p4/3B1N2/PPP5/5R1K w - - bm Bxh6;
@@ -100,8 +100,7 @@ r5n1/p1p1q2k/4b2p/3pB3/3PP1pP/8/PPPQ2P1/5RK1 w - - bm Qf4; c1 "diff=7";
 rn1q1rk1/p2p1pb1/bp3np1/2pP2Bp/7P/P1N2N2/1PQ1PPP1/R3KB1R w KQ - bm g4; c0 "Gupta-Fier, Reykjavik Open 2015";
 rn2kbnr/pp2ppp1/2p5/3pP1Bp/3P3P/3Q4/PqP2PP1/RN2K1NR w KQkq - id ?; bm e6;
 rnbRrk2/2p5/1p2PB1p/pP4p1/8/P3R2P/2P2P2/6K1 w - - bm h4; c1 "diff=7";
-2k5/2p5/1q1p4/pPpPp1pp/N1P1Pp2/P4PbP/KQ4P1/8 w - - am Nxb6+?; c1 "diff=10";
-8/8/5k2/8/2B4p/5RbP/5pP1/7K b - -; c0 "eval = draw"; c1 "diff=7";
+2k5/2p5/1q1p4/pPpPp1pp/N1P1Pp2/P4PbP/KQ4P1/8 w - - bm h4; c1 "diff=10";
 8/8/8/5Bp1/7k/8/4pPKP/8 w - - bm Bg4;  eval = draw;
 1k3b1q/pP2p1p1/P1K1P1Pp/7P/2B5/8/8/8 w - - bm Kd5 Bd5; c0 "eval +/-"; c1 "diff=8";
 8/2b2k1K/1pPp1p2/1P1P1P2/5B2/8/8/8 w - - bm Be3 Bd2 Bc1 Bh6; c1 "diff=2"; c0 "the point to play Bxf6 on move 3";
@@ -262,7 +261,7 @@ r2q1rk1/1p1bb2p/n3pp2/n7/pNPp1BPN/P2P4/1P4BP/1R1QR1K1 w - - bm Nd5; id "Ivanchuk
 r5k1/1qrnb1p1/3p2Pp/3Pp3/pp2N1R1/3QBP2/PPP5/1K1R4 w - - bm Bxh6; id "Brain twister, nr 61 by Anton Stadlhofer";
 1k2rb1r/1pp3p1/p4pb1/1q6/1P1PN2p/2P2P1P/3Q2PB/R3R2K w - - bm c4; id "unknown";
 1rbqr1k1/2n2pb1/5np1/3Pp1B1/1pp5/2N3NP/1PB3P1/R2Q1RK1 w - - bm Nh5; id "Papenin - Plomp, CCO17/F board 5 2011";
-r1r3k1/1bq1bpp1/p1nppn2/1p4Bp/4PP1Q/PNNB4/1PP3PP/2KRR3 w - - bm g4; id "Trofimov - Kurdyukov, ICCF 2009";
+r1r3k1/1bq1bpp1/p1nppn2/1p4Bp/4PP1Q/PNNB4/1PP3PP/2KRR3 w - - bm g4; id "Trofimov - 1Kurdyukov, ICCF 2009";
 r4rk1/pp3pq1/1n2p1p1/6Bp/3PQ3/7R/PP3PPP/5RK1 w - - bm g4; id "Loginov - Kruger, ICCF 2011";
 2r1qrk1/pp1bn1p1/4p2p/3pP1NR/2pP2P1/P1P1B3/2PKQP2/7R w - - bm Rxh6; id "rodog-acudata, 2010";
 r3k2r/1bqpnpbp/p1n1p1p1/1p5P/4P3/1NN1B3/PPPQ1PP1/2KR1B1R w kq - bm Bxb5;id "voronn009";
@@ -297,7 +296,7 @@ q3nrk1/4bppp/3p4/r3nPP1/4P2P/NpQ1B3/1P4B1/1K1R3R b - - bm Nc7; c0 "Karjakin-Anan
 r2r2k1/pqp1bppp/1pn1pn2/8/2NP1B2/2N1P1P1/PPQ2P1P/R4RK1 b - - bm Rxd4;
 r5k1/1b2bppp/1n2p3/1P6/2qPP3/r1p2N2/1R2QPPP/1BR1B1K1 b - - bm cxb2; c1 "diff=6";
 r6k/N1Rb2bp/p2p1nr1/3Pp2q/1P2Pp1P/5N2/P3QBP1/4R1K1 b - - bm Bh3; id "arasan19.158"; c0 "Persson-Gerhardt, Simon Webb mem email 2007";
-8/4nk2/1p3p2/2rp2pp/1P1R1N1P/6P1/3KPP2/8 b - - am Rb5?; c1 "diff=7";
+8/4nk2/1p3p2/2rp2pp/1P1R1N1P/6P1/3KPP2/8 b - - bm Rc4; c1 "diff=7";
 1rb1nrk1/2q1bppp/p1n1p3/2p1P3/2Pp1PP1/3P1NN1/P5BP/R1BQ1RK1 w - - acd 41; acs 3034; bm Qe2; c0 "
 r3r1k1/1b1n1p2/1q1p1n1p/2p1p2P/p1P3p1/P1QNPPB1/1P2B1P1/2KR3R w - - acd 42; acs 2245; bm Rh4; c0 "
 r4rk1/p2qn1bp/1pnp2p1/2p2p2/4PP1N/2PPB3/PP2QN1P/R4RK1 b - - acd 39; acs 3481; bm Rae8; c0 "
@@ -306,7 +305,7 @@ r4rk1/p2qn1bp/1pnp2p1/2p2p2/4PP1N/2PPB3/PP2QN1P/R4RK1 b - - acd 39; acs 3481; bm
 8/8/4N3/p6p/P1P4b/4kp2/8/5K2 w - - bm c5; id="20";
 4r3/p4ppp/1kp5/3p4/8/1P4P1/5PBP/2R2K2 w - - bm Bh3; id="31";
 rn2k2r/p1pq1ppp/bp2pn2/8/Q2P4/P4N2/1P2PPPP/R1B1KB1R w KQkq - bm Qc2; id "STS(v15.0) AT.003"; c0 "Qc2=10, Qd1=2";
-r4rk1/ppqb1ppp/4p3/2Qnb3/4N3/P1P3PP/1P3PB1/R1B2R1K b - - bm Bc6; id "STS(v15.0) AT.007"; c0 "Bc6=10, Qd8=4";
+r4rk1/ppqb1ppp/4p3/2Qnb3/4N3/P1P3PP/1P3PB1/R1B2R1K b - - bm Bc6;
 r2q1rk1/pp3ppp/1np1b3/8/3Q4/bPN1B1PP/P3PPB1/R4RK1 b - - bm Qc8; id "STS(v15.0) AT.017"; c0 "Qc8=10, f6=4, Re8=4, Rc8=1, Qxd4=1, Qe7=4, Qc7=2, Bf5=2";
 r2q1rk1/pp3pp1/2p2n1p/8/2BQ2b1/4PN2/PP3PPP/2R2RK1 w - - bm Qf4; id "STS(v15.0) AT.018"; c0 "Qf4=10";
 r2q1rk1/4bppp/p1p1pn2/4B3/8/2N3P1/PPP2P1P/R2Q1RK1 w - - bm Qe2; id "STS(v15.0) AT.020"; c0 "Qe2=10, Re1=8, Qf3=9";
@@ -333,8 +332,8 @@ r1bq1rk1/1p2bppp/p1n1pn2/2P5/P1B5/2N1PN2/1P3PPP/R1BQ1RK1 w - - bm Bd2; id "STS(v
 2r1r1k1/1b3pp1/p3pn1p/P1b3q1/1pN5/4P1Q1/1P1BBPPP/1R3RK1 b - - bm Qf5; id "STS(v15.0) AT.085"; c0 "Qf5=10, Qxg3=3, Ne4=2";
 1r4k1/1brp1pp1/1p3n1p/2q1p3/2P1P3/1PNBQ3/P3RP1P/3R3K w - - bm Qh3; id "STS(v15.0) AT.091"; c0 "Qh3=10, Red2=4, Qf3=8, Bc2=6, Bb1=5";
 1r3r1k/8/3p2p1/p1pQq1pp/N1P1P3/Pp3PP1/1Pn2K1P/1R3R2 b - - bm Qf6; id "STS(v15.0) AT.092"; c0 "Qf6=10, g4=2, Qxd5=3";
-1k6/1r3p2/3p1b1p/pprPpPpP/5qP1/PRPB1Q2/1P6/1K2R3 w - - bm Qg2; id "STS(v15.0) AT.096"; c0 "Qg2=10, Qh3=2, Qe2=4";
-r1bq1rk1/pp4bp/2np4/2p1p1p1/P1N1P3/1P1P1NP1/1BP1QPKP/1R3R2 b - - bm Bh3; id "Vincent Lejeune - hard CCC 2008 - Pos 8";
+1k6/1r3p2/3p1b1p/pprPpPpP/5qP1/PRPB1Q2/1P6/1K2R3 w - - bm Qg2; id "STS(v15.0) AT.096";
+r1bq1rk1/pp4bp/2np4/2p1p1p1/P1N1P3/1P1P1NP1/1BP1QPKP/1R3R2 b - - bm Bh3; id "VL Pos 8";
 r2qk2r/ppp1b1pp/2n1p3/3pP1n1/3P2b1/2PB1NN1/PP4PP/R1BQK2R w KQkq - bm Nxg5; id "Smaguine-Sahovic, Bienne 1990";
 r1b4k/pp2qnr1/3p4/NP1Qp2p/P1B1PpP1/5P2/6P1/3R1RK1 b - - bm Qh4; id "Hovde-Timmerman, 25 Years Jubilee cr 1991";
 2r1r1k1/1p2pp2/p2n2p1/q2PNb1p/8/1Q4PP/PP2RPB1/4R1K1 w - - bm g4; id "Turgut - Latas, WCCC27CT01(WS), 2007";
@@ -388,8 +387,6 @@ r1bq1rk1/ppp3b1/3p1nn1/P1PPp1Bp/1P2P3/1QNN1Pp1/4B1P1/R4RK1 b - - bm Bh6; c1 "dif
 r5k1/6b1/2Nq4/2pP1p2/p1P1pPr1/Pp6/3R2PQ/1K3R2 b - - bm e3; c1 "diff=9";
 r5rk/1bq1bpp1/1p1ppn1p/pP5P/2P1P3/P1N2P2/1B1Q1P2/1K1R1BR1 w - - id ?; bm Nd5;
 r6r/4k3/p2bP2p/2n2PP1/2BQn2P/1pP1p3/1q1BK3/3R3R b - - bm Qc2; c1 "diff=8";
-8/1p6/1p6/kPp2P1K/2P5/N1Pp4/q2P4/1N6 w - -; c0 "eval = draw"; c1 "diff=9";
-r1b1k3/1p1p1pp1/1p1P3p/pP6/P7/8/5PPP/4R1K1 b q -; c0 "eval +/-"; c1 "diff=6";
 r1b1r1k1/1p1n1pbp/2p1n1p1/q1P1p3/4P3/1PN1BNPP/2Q2PB1/1R1R2K1 w - - acd 41; acs 2969; bm Na4; c0 "
 r3r1k1/ppqbbpp1/2pp1nnp/3Pp3/2P1P3/5N1P/PPBN1PP1/R1BQR1K1 w - - acd 41; acs 3179; bm a4; c0 "
 8/8/4kpp1/3p1b2/p6P/2B5/6P1/6K1 b - - bm Bh3; id="4";
@@ -421,16 +418,15 @@ r1bq1rk1/pp2ppbp/2n3p1/2P1P3/1n6/2N2NP1/PP3PBP/R1BQ1RK1 w - - bm Qa4; id "STS(v1
 1k1rqb1r/ppp5/2n4n/3p2p1/3P3p/2PB4/PP2Q1PP/RN2BRK1 b - - bm Qd7; id "STS(v15.0) AT.098"; c0 "Qd7=10";
 5b2/p2k1p2/P3pP1p/n2pP1p1/1p1P2P1/1P1KBN2/7P/8 w - - bm Nxg5; id "Anand-Shirov 2000";
 r3r1k1/pp1q1p2/2p2npb/PPPp4/3Pp3/2NNPpP1/1R1B1P1K/3Q3R b - - bm Kg7; id "Nikolic-Fischer (Vinkovci, 1968)";
-r5k1/p1pb2bp/3p3r/P1pPp1p1/2B1Pq2/1R2QPp1/1P4PP/5RBK b - - bm Rxh2; id "Aaron Summerscale - Gawain Jones, British Championship, 2009";
-2b2bkr/2p1qn2/1p4r1/pNpPp1pp/2P1Pp2/P1Q2P1P/1P1R2PN/3BR1K1 b - - bm g4; id "Gnutov corr game";
+r5k1/p1pb2bp/3p3r/P1pPp1p1/2B1Pq2/1R2QPp1/1P4PP/5RBK b - - bm Rxh2; id="Aaron Summerscale - Gawain Jones, British Championship, 2009";
 r1b1k3/2q1ppb1/2p2n2/3p1PBB/2nP3P/Pp5N/1P2Q1P1/2KR3R b q - bm Rxa3; id "Sax,G (2505)-Kestler,H (2410)/Nice 1974";
 2r1bq1k/2r2p1P/1p2pPp1/p2pP1N1/3P4/nPP5/R2Q2K1/2RN4 w - - bm Rxa3;id "unknown";
 1r2r1k1/1bp1qppn/1p1p3p/p7/P1PPp2n/BBP1P1NP/4QPP1/1R2R1K1 b - - bm Nf3; id "Rybka 4 vs Houdini 1.02, 2010";
 3r2k1/2qrbb2/pp3pp1/2pnpn1p/P1N1N2P/1PPP1BP1/RBQ2P2/R5K1 b - - bm Nf4; id "unknown";
 r1b2rk1/1pp2ppp/2n2q2/p1b1p3/2N1Pn2/1BP1BN1P/PPQ2PPK/R4R2 b - - bm Nxg2; id "unknown";
 r2q1rk1/2pb2b1/1p1p1n2/PN1Pp3/1BP1Pppn/8/3N1PP1/R2QRBK1 b - - bm Nxg2; id "Siffon - Vitamix";
-r1bq2k1/pp4r1/3p1nnb/3Pp2p/PP2Ppp1/2NN1P2/2R1BBPP/3Q1R1K b - - bm g3; id "Podezd - Gildar, bestlogic.ru, 2010";
-r1bq1rk1/p4p1p/1np3p1/3p2Pn/1p2PP2/1PbQB3/P1P1BN1P/2KR2NR b - - bm Nc4; id "Nielsen-Malmdin, CorrGame 1995";
+r1bq2k1/pp4r1/3p1nnb/3Pp2p/PP2Ppp1/2NN1P2/2R1BBPP/3Q1R1K b - - bm g3; id="Podezd - Gildar, bestlogic.ru, 2010";
+r1bq1rk1/p4p1p/1np3p1/3p2Pn/1p2PP2/1PbQB3/P1P1BN1P/2KR2NR b - - bm Nc4; id="Nielsen-Malmdin, CorrGame 1995";
 4rr1k/pp1b2b1/2p4p/6pn/3PBp1q/P1N1P2P/1P1QNPP1/3RR1K1 b - - bm Bxh3; id "Dutra - Papenin, WCCC32PR11, 2008";
 4rk2/3r2p1/2bp1nPp/pNq1pP1P/PpP5/1B3P2/1PR3K1/3RQ3 w - - bm Rd5;
 r6r/pb2k2p/1pn1pnp1/1Np1b3/2P1PB2/1P4PB/P3N2P/2KR3R w - - bm Rd6;
