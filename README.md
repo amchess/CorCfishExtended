@@ -4,12 +4,12 @@
   
   /*  
 	  The "Contempt" option has the default set to zero , but you can find good success with a setting of minus 10 to minus 30. Minus 10 would be used for stronger engines like Komodo and Houdini, for most other engines minus 30 is fine. A setting of as low as a plus 10 will help in securing a draw if needed. It's used for game and not analysis.
-	  Contempt=18 (not default), in particular, is very good for particular openings: Scandinavian Defense, Benoni, Rubinstein and Tromposky...
+	  Contempt=18 (not default), in particular, is very good for particular openings: Scandinavian Defense, Benoni, Rubinstein and Tromposky... The C version has the contempt's range from -100 to +100.
   
   */
   o["Contempt"]               << Option(0, -300, 300);
   /* White_Contempt is to be used for analysis when someone wants to main the "respect" setting from the White POV. The Contempt parameters were increased from -100 to 100 to -300 to 300.  
-  */  
+  The C version has the contempt's range from -100 to +100.*/  
   o["White_Contempt"]         << Option(0, -300, 300);
   //best: set to logical cores
   o["Threads"]                 << Option(n, 1, 512, on_threads);
