@@ -165,7 +165,9 @@ ifeq ($(COMP),gcc)
 	endif
 
 	ifneq ($(KERNEL),Darwin)
-	   LDFLAGS += -Wl,--no-as-needed
+		ifneq ($(KERNEL),OpenBSD)
+			LDFLAGS += -latomic
+		endif
 	endif
 endif
 

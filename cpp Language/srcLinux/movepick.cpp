@@ -25,7 +25,7 @@
 namespace {
 
   enum Stages {
-	MAIN_SEARCH, CAPTURES_INIT, CAPTURE_KILLERS, GOOD_CAPTURES, KILLERS, COUNTERMOVE, QUIET_INIT, QUIET, BAD_CAPTURES,
+    MAIN_SEARCH, CAPTURES_INIT, GOOD_CAPTURES, KILLERS, COUNTERMOVE, QUIET_INIT, QUIET, BAD_CAPTURES,
     EVASION, EVASIONS_INIT, ALL_EVASIONS,
     PROBCUT, PROBCUT_INIT, PROBCUT_CAPTURES,
     QSEARCH_WITH_CHECKS, QCAPTURES_1_INIT, QCAPTURES_1, QCHECKS,
@@ -123,7 +123,7 @@ MovePicker::MovePicker(const Position& p, Move ttm, Value th, const CapturePiece
 
 /// score() assigns a numerical value to each move in a list, used for sorting.
 /// Captures are ordered by Most Valuable Victim (MVV), preferring captures
-/// near our home rank. Quiets are ordered using the histories.
+/// with a good history. Quiets are ordered using the histories.
 template<GenType Type>
 void MovePicker::score() {
 
@@ -171,32 +171,15 @@ Move MovePicker::next_move(bool skipQuiets) {
       endMoves = generate<CAPTURES>(pos, cur);
       score<CAPTURES>();
       ++stage;
-
-      move = killers[2];  // First capture killer move
-            if(   move != MOVE_NONE
-               && move != ttMove
-               && pos.pseudo_legal(move)
-               && pos.capture_or_promotion(move))
-                return move;
-
-   case CAPTURE_KILLERS:
-		++stage;
-		move = killers[3]; // Second capture killer move
-		if(   move != MOVE_NONE
-		   && move != ttMove
-		   && pos.pseudo_legal(move)
-		   && pos.capture_or_promotion(move))
-		   return move;
+      /* fallthrough */
 
   case GOOD_CAPTURES:
       while (cur < endMoves)
       {
           move = pick_best(cur++, endMoves);
-          if (    move != ttMove
-                 && move != killers[2]
-                 && move != killers[3])
+          if (move != ttMove)
           {
-              if (pos.see_ge(move))
+              if (pos.see_ge(move, Value(-55 * (cur-1)->value / 1024)))
                   return move;
 
               // Losing capture, move it to the beginning of the array

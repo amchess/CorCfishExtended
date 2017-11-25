@@ -50,7 +50,9 @@ static Move pick_best(ExtMove *begin, ExtMove *end)
     if (q->value > p->value)
       p = q;
   Move m = p->move;
+  int v = p->value;
   *p = *begin;
+  begin->value = v;
 
   return m;
 }
@@ -62,13 +64,14 @@ static Move pick_best(ExtMove *begin, ExtMove *end)
 static void score_captures(const Pos *pos)
 {
   Stack *st = pos->st;
+  CapturePieceToHistory *history = pos->captureHistory;
 
   // Winning and equal captures in the main search are ordered by MVV,
-  // preferring captures near our home rank.
+  // preferring captures near our with a good history.
 
   for (ExtMove *m = st->cur; m < st->endMoves; m++)
     m->value =  PieceValue[MG][piece_on(to_sq(m->move))]
-              - (200 * relative_rank_s(pos_stm(), to_sq(m->move)));
+              + (*history)[moved_piece(m->move)][to_sq(m->move)][type_of_p(piece_on(to_sq(m->move)))];
 }
 
 SMALL
@@ -138,7 +141,7 @@ Move next_move(const Pos *pos, int skipQuiets)
     while (st->cur < st->endMoves) {
       move = pick_best(st->cur++, st->endMoves);
       if (move != st->ttMove) {
-        if (see_test(pos, move, 0))
+        if (see_test(pos, move, -55 * (st->cur-1)->value / 1024))
           return move;
 
         // Losing capture, move it to the beginning of the array.

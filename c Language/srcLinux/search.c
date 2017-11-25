@@ -29,6 +29,7 @@
 #include "movegen.h"
 #include "movepick.h"
 #include "search.h"
+#include "settings.h"
 #include "timeman.h"
 #include "thread.h"
 #include "tt.h"
@@ -65,7 +66,6 @@ static const int razor_margin[4] = { 0, 570, 603, 554 };
 // Futility and reductions lookup tables, initialized at startup
 static int FutilityMoveCounts[2][16]; // [improving][depth]
 static int Reductions[2][2][128][64];  // [pv][improving][depth][moveNumber]
-static const int CounterMovePruneThreshold = 0;
 
 INLINE Depth reduction(int i, Depth d, int mn, const int NT)
 {
@@ -110,6 +110,7 @@ static Value value_from_tt(Value v, int ply);
 static void update_pv(Move *pv, Move move, Move *childPv);
 static void update_cm_stats(Stack *ss, Piece pc, Square s, int bonus);
 static void update_stats(const Pos *pos, Stack *ss, Move move, Move *quiets, int quietsCnt, int bonus);
+static void update_capture_stats(const Pos *pos, Move move, Move *captures, int captureCnt, int bonus);
 static int pv_is_draw(Pos *pos);
 static void check_time(void);
 static void stable_sort(RootMove *rm, int num);
@@ -148,6 +149,13 @@ void search_init(void)
 
 void search_clear()
 {
+  if (!settings.tt_size) {
+    delayed_settings.clear = 1;
+    return;
+  }
+
+  Time.availableNodes = 0;
+
   tt_clear();
   for (int i = 0; i < num_cmh_tables; i++)
     if (cmh_tables[i]) {
@@ -161,8 +169,10 @@ void search_clear()
     Pos *pos = Threads.pos[idx];
     stats_clear(pos->counterMoves);
     stats_clear(pos->history);
+    stats_clear(pos->captureHistory);
   }
 
+  mainThread.previousScore = VALUE_INFINITE;
   mainThread.previousTimeReduction = 1;
 }
 
@@ -512,14 +522,15 @@ skip_search:
                           bestValue - mainThread.previousScore };
 
         int improvingFactor = max(229, min(715, 357 + 119 * F[0] - 6 * F[1]));
-		int us = pos_stm();
+
+        int us = pos_stm();
         int thinkHard =   DrawValue[us] == bestValue
                        && Limits.time[us] - time_elapsed() > Limits.time[us ^ 1]
                        && pv_is_draw(pos);
 
         double unstablePvFactor = 1 + mainThread.bestMoveChanges + thinkHard;
 
-		// If the best move is stable over several iterations, reduce time
+        // If the best move is stable over several iterations, reduce time
         // for this move, the longer the move has been stable, the more.
         // Use part of the time gained from a previous stable move for the
         // current move.
@@ -527,9 +538,10 @@ skip_search:
         for (int i = 3; i < 6; i++)
           if (lastBestMoveDepth * i < pos->completedDepth && !thinkHard)
             timeReduction *= 1.3;
-        unstablePvFactor *= pow(mainThread.previousTimeReduction, 0.51) /timeReduction;
+        unstablePvFactor *= pow(mainThread.previousTimeReduction, 0.51) / timeReduction;
+
         if (   rm->size == 1
-			|| time_elapsed() > time_optimum() * unstablePvFactor * improvingFactor / 628)
+            || time_elapsed() > time_optimum() * unstablePvFactor * improvingFactor / 628)
         {
           // If we are allowed to ponder do not stop the search now but
           // keep pondering until the GUI sends "ponderhit" or "stop".
@@ -657,6 +669,24 @@ static void update_cm_stats(Stack *ss, Piece pc, Square s, int bonus)
 
   if (move_is_ok((ss-4)->currentMove))
     cms_update(*(ss-4)->history, pc, s, bonus);
+}
+
+// update_capture_stats() updates move sorting heuristics when a new capture
+// best move is found
+
+void update_capture_stats(const Pos *pos, Move move, Move *captures,
+                          int captureCnt, int bonus)
+{
+  Piece moved_piece = moved_piece(move);
+  int captured = type_of_p(piece_on(to_sq(move)));
+  cpth_update(*pos->captureHistory, moved_piece, to_sq(move), captured, bonus);
+
+  // Decrease all the other played capture moves
+  for (int i = 0; i < captureCnt; i++) {
+    moved_piece = moved_piece(captures[i]);
+    captured = type_of_p(piece_on(to_sq(captures[i])));
+    cpth_update(*pos->captureHistory, moved_piece, to_sq(captures[i]), captured, -bonus);
+  }
 }
 
 // update_stats() updates killers, history, countermove and countermove

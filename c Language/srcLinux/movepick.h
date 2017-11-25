@@ -30,12 +30,13 @@
 
 #define stats_clear(s) memset(s, 0, sizeof(*s))
 
+static const int CounterMovePruneThreshold = 0;
+
 INLINE void cms_update(PieceToHistory cms, Piece pc, Square to, int v)
 {
   int w = v >= 0 ? v : -v;
 
-  cms[pc][to] -= cms[pc][to] * w / 936;
-  cms[pc][to] += v * 32;
+  cms[pc][to] += v * 32 - cms[pc][to] * w / 936;
 }
 
 INLINE void history_update(ButterflyHistory history, int c, Move m, int v)
@@ -43,8 +44,15 @@ INLINE void history_update(ButterflyHistory history, int c, Move m, int v)
   int w = v >= 0 ? v : -v;
 
   m &= 4095;
-  history[c][m] -= history[c][m] * w / 324;
-  history[c][m] += v * 32;
+  history[c][m] += v * 32 - history[c][m] * w / 324;
+}
+
+INLINE void cpth_update(CapturePieceToHistory history, Piece pc, Square to,
+                        int captured, int v)
+{
+  int w = v >= 0 ? v : -v;
+
+  history[pc][to][captured] += v * 2 - history[pc][to][captured] * w / 324;
 }
 
 #define ST_MAIN_SEARCH             0

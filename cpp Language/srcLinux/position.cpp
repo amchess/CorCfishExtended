@@ -162,7 +162,9 @@ void Position::init() {
 Position& Position::set(const string& fenStr, bool isChess960, StateInfo* si, Thread* th) {
 /*
    A FEN string defines a particular position using only the ASCII character set.
+
    A FEN string contains six fields separated by a space. The fields are:
+
    1) Piece placement (from white's perspective). Each rank is described, starting
       with rank 8 and ending with rank 1. Within each rank, the contents of each
       square are described from file A through file H. Following the Standard
@@ -171,19 +173,24 @@ Position& Position::set(const string& fenStr, bool isChess960, StateInfo* si, Th
       letters ("PNBRQK") whilst Black uses lowercase ("pnbrqk"). Blank squares are
       noted using digits 1 through 8 (the number of blank squares), and "/"
       separates ranks.
+
    2) Active color. "w" means white moves next, "b" means black.
+
    3) Castling availability. If neither side can castle, this is "-". Otherwise,
       this has one or more letters: "K" (White can castle kingside), "Q" (White
       can castle queenside), "k" (Black can castle kingside), and/or "q" (Black
       can castle queenside).
+
    4) En passant target square (in algebraic notation). If there's no en passant
       target square, this is "-". If a pawn has just made a 2-square move, this
       is the position "behind" the pawn. This is recorded only if there is a pawn
       in position to make an en passant capture, and if there really is a pawn
       that might have advanced two squares.
+
    5) Halfmove clock. This is the number of halfmoves since the last pawn advance
       or capture. This is used to determine if a draw can be claimed under the
       fifty-move rule.
+
    6) Fullmove number. The number of the full move. It starts at 1, and is
       incremented after Black's move.
 */
@@ -996,17 +1003,21 @@ bool Position::see_ge(Move m, Value threshold) const {
   Value balance; // Values of the pieces taken by us minus opponent's ones
   Bitboard occupied, stmAttackers;
 
-  balance = PieceValue[MG][piece_on(to)];
+  // The opponent may be able to recapture so this is the best result
+  // we can hope for.
+  balance = PieceValue[MG][piece_on(to)] - threshold;
 
-  if (balance < threshold)
+  if (balance < VALUE_ZERO)
       return false;
 
+  // Now assume the worst possible result: that the opponent can
+  // capture our piece for free.
   balance -= PieceValue[MG][nextVictim];
 
-  if (balance >= threshold) // Always true if nextVictim == KING
+  if (balance >= VALUE_ZERO) // Always true if nextVictim == KING
       return true;
 
-  bool relativeStm = true; // True if the opponent is to move
+  bool opponentToMove = true;
   occupied = pieces() ^ from ^ to;
 
   // Find all attackers to the destination square, with the moving piece removed,
@@ -1015,6 +1026,12 @@ bool Position::see_ge(Move m, Value threshold) const {
 
   while (true)
   {
+      // The balance is negative only because we assumed we could win
+      // the last piece for free. We are truly winning only if we can
+      // win the last piece _cheaply enough_. Test if we can actually
+      // do this otherwise "give up".
+      assert(balance < VALUE_ZERO);
+
       stmAttackers = attackers & pieces(stm);
 
       // Don't allow pinned pieces to attack pieces except the king as long all
@@ -1022,25 +1039,40 @@ bool Position::see_ge(Move m, Value threshold) const {
       if (!(st->pinnersForKing[stm] & ~occupied))
           stmAttackers &= ~st->blockersForKing[stm];
 
+      // If we have no more attackers we must give up
       if (!stmAttackers)
-          return relativeStm;
+          break;
 
       // Locate and remove the next least valuable attacker
       nextVictim = min_attacker<PAWN>(byTypeBB, to, stmAttackers, occupied, attackers);
 
       if (nextVictim == KING)
-          return relativeStm == bool(attackers & pieces(~stm));
+      {
+          // Our only attacker is the king. If the opponent still has
+          // attackers we must give up. Otherwise we make the move and
+          // (having no more attackers) the opponent must give up.
+          if (!(attackers & pieces(~stm)))
+              opponentToMove = !opponentToMove;
+          break;
+      }
 
-      balance += relativeStm ?  PieceValue[MG][nextVictim]
-                             : -PieceValue[MG][nextVictim];
+      // Assume the opponent can win the next piece for free and switch sides
+      balance += PieceValue[MG][nextVictim];
+      opponentToMove = !opponentToMove;
 
-      relativeStm = !relativeStm;
+      // If balance is negative after receiving a free piece then give up
+      if (balance < VALUE_ZERO)
+          break;
 
-      if (relativeStm == (balance >= threshold))
-          return relativeStm;
-
+      // Complete the process of switching sides. The first line swaps
+      // all negative numbers with non-negative numbers. The compiler
+      // probably knows that it is just the bitwise negation ~balance.
+      balance = -balance-1;
       stm = ~stm;
   }
+
+  // If the opponent gave up we win, otherwise we lose.
+  return opponentToMove;
 }
 
 

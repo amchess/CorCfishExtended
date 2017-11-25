@@ -82,13 +82,6 @@ static void on_largepages(Option *opt)
 #endif
 
 static Option options_map[] = {
-  { "Correspondence Mode", OPT_TYPE_CHECK, 0, 0, 0, NULL, NULL, 0, NULL },
-  { "Clean Search", OPT_TYPE_CHECK, 0, 0, 0, NULL, NULL, 0, NULL },
-  { "Razoring", OPT_TYPE_CHECK, 1, 0, 0, NULL, NULL, 0, NULL },
-  { "Futility", OPT_TYPE_CHECK, 1, 0, 0, NULL, NULL, 0, NULL },
-  { "Pruning", OPT_TYPE_CHECK, 1, 0, 0, NULL, NULL, 0, NULL },
-  { "NullMove", OPT_TYPE_CHECK, 1, 0, 0, NULL, NULL, 0, NULL },
-  { "ProbCut", OPT_TYPE_CHECK, 1, 0, 0, NULL, NULL, 0, NULL },
   { "Debug Log File", OPT_TYPE_STRING, 0, 0, 0, "<empty>", on_logger, 0, NULL },
   { "Contempt", OPT_TYPE_SPIN, 0, -100, 100, NULL, NULL, 0, NULL },
   { "Threads", OPT_TYPE_SPIN, 1, 1, MAX_THREADS, NULL, on_threads, 0, NULL },

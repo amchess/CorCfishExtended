@@ -43,7 +43,8 @@ int main(int argc, char **argv)
   endgames_init();
   threads_init();
   options_init();
-
+  search_clear();
+  
   uci_loop(argc, argv);
 
   threads_exit();

@@ -54,6 +54,9 @@ void thread_init(void *arg)
   }
   if (!cmh_tables[node]) {
      cmh_tables[node] = calloc(sizeof(CounterMoveHistoryStat), 1);
+	 for (int j = 0; j < 16; j++)
+		for (int k = 0; k < 64; k++)
+			(*cmh_tables[node])[0][0][j][k] = CounterMovePruneThreshold - 1;
   }
 
   Pos *pos;
@@ -63,6 +66,7 @@ void thread_init(void *arg)
  pos->materialTable = calloc(8192 * sizeof(MaterialEntry), 1);
  pos->counterMoves = calloc(sizeof(CounterMoveStat), 1);
  pos->history = calloc(sizeof(ButterflyHistory), 1);
+ pos->captureHistory = calloc(sizeof(CapturePieceToHistory), 1);
  pos->rootMoves = calloc(sizeof(RootMoves), 1);
  pos->stack = calloc((MAX_PLY + 110) * sizeof(Stack), 1);
  pos->moveList = calloc(10000 * sizeof(ExtMove), 1);
@@ -150,6 +154,7 @@ void thread_destroy(Pos *pos)
     free(pos->materialTable);
     free(pos->counterMoves);
     free(pos->history);
+	free(pos->captureHistory);
     free(pos->rootMoves);
     free(pos->stack);
     free(pos->moveList);
