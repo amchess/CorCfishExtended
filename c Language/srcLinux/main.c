@@ -44,7 +44,7 @@ int main(int argc, char **argv)
   threads_init();
   options_init();
   search_clear();
-  
+
   uci_loop(argc, argv);
 
   threads_exit();

@@ -29,7 +29,7 @@ Value search_NonPV(Pos *pos, Stack *ss, Value alpha, Depth depth, int cutNode)
   Value bestValue, value, ttValue, eval, maxValue;
   int ttHit, inCheck, givesCheck, singularExtensionNode, improving;
   int captureOrPromotion, doFullDepthSearch, moveCountPruning, skipQuiets;
-  int ttCapture, pvExact;
+  int ttCapture, goodCap, pvExact;
   Piece movedPiece;
   int moveCount, captureCount, quietCount;
 
@@ -346,6 +346,7 @@ moves_loop: // When in check search starts from here.
                          &&  tte_depth(tte) >= depth - 3 * ONE_PLY;
   skipQuiets = 0;
   ttCapture = 0;
+  goodCap = 0;
   pvExact = PvNode && ttHit && tte_bound(tte) == BOUND_EXACT;
 
   // Step 11. Loop through moves
@@ -407,6 +408,7 @@ moves_loop: // When in check search starts from here.
         &&  is_legal(pos, move))
     {
       Value rBeta = max(ttValue - 2 * depth / ONE_PLY, -VALUE_MATE);
+//      Value rBeta = min(max(ttValue - 2 * depth / ONE_PLY, -VALUE_MATE), VALUE_KNOWN_WIN);
       Depth d = (depth / (2 * ONE_PLY)) * ONE_PLY;
       ss->excludedMove = move;
       ss->skipEarlyPruning = 1;
@@ -489,8 +491,15 @@ moves_loop: // When in check search starts from here.
       continue;
     }
 
-    if (move == ttMove && captureOrPromotion)
-      ttCapture = 1;
+    if (moveCount == 1 && captureOrPromotion)
+    {
+     if (move == ttMove)
+     ttCapture = 1;
+
+     else
+     if (to_sq(move) == to_sq((ss - 1)->currentMove))
+     goodCap = 1;
+    }
 
     // Update the current move (this must be done after singular extension
     // search)
@@ -523,6 +532,8 @@ moves_loop: // When in check search starts from here.
 
         // Increase reduction if ttMove is a capture
         if (ttCapture)
+          r += ONE_PLY;
+        else if(goodCap && !inCheck && !givesCheck)
           r += ONE_PLY;
 
         // Increase reduction for cut nodes
@@ -654,7 +665,7 @@ moves_loop: // When in check search starts from here.
     if (!captureOrPromotion && move != bestMove && quietCount < 64)
       quietsSearched[quietCount++] = move;
     else if (captureOrPromotion && move != bestMove && captureCount < 32)
-      capturesSearched[captureCount++] = move;	  
+      capturesSearched[captureCount++] = move;
   }
 
   // The following condition would detect a stop only after move loop has
@@ -680,6 +691,7 @@ moves_loop: // When in check search starts from here.
     else
       update_capture_stats(pos, bestMove, capturesSearched, captureCount,
                            stat_bonus(depth));
+
     // Extra penalty for a quiet TT move in previous ply when it gets refuted.
     if ((ss-1)->moveCount == 1 && !captured_piece())
       update_cm_stats(ss-1, piece_on(prevSq), prevSq,

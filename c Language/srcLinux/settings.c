@@ -35,10 +35,10 @@ void process_delayed_settings(void)
     settings.tt_size = delayed_settings.tt_size;
     tt_allocate(settings.tt_size);
   }
-  
+
   if (delayed_settings.clear) {
     delayed_settings.clear = 0;
     search_clear();
-  }
+  }  
 }
 

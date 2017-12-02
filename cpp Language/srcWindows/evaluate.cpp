@@ -212,23 +212,24 @@ namespace {
   const Score KingProtector[] = { S(-3, -5), S(-4, -3), S(-3, 0), S(-1, 1) };
 
   // Assorted bonuses and penalties used by evaluation
-  const Score MinorBehindPawn     = S( 16,  0);
-  const Score BishopPawns         = S(  8, 12);
-  const Score LongRangedBishop    = S( 22,  0);
-  const Score RookOnPawn          = S(  8, 24);
-  const Score TrappedRook         = S( 92,  0);
-  const Score WeakQueen           = S( 50, 10);
-  const Score OtherCheck          = S( 10, 10);
-  const Score CloseEnemies        = S(  7,  0);
-  const Score PawnlessFlank       = S( 20, 80);
-  const Score ThreatByHangingPawn = S( 71, 61);
-  const Score ThreatBySafePawn    = S(192,175);
-  const Score ThreatByRank        = S( 16,  3);
-  const Score Hanging             = S( 48, 27);
-  const Score WeakUnopposedPawn   = S(  5, 25);
-  const Score ThreatByPawnPush    = S( 38, 22);
-  const Score HinderPassedPawn    = S(  7,  0);
-  const Score TrappedBishopA1H1   = S( 50, 50);
+  const Score MinorBehindPawn       = S( 16,  0);
+  const Score BishopPawns           = S(  8, 12);
+  const Score LongRangedBishop      = S( 22,  0);
+  const Score RookOnPawn            = S(  8, 24);
+  const Score TrappedRook           = S( 92,  0);
+  const Score WeakQueen             = S( 50, 10);
+  const Score OtherCheck            = S( 10, 10);
+  const Score CloseEnemies          = S(  7,  0);
+  const Score PawnlessFlank         = S( 20, 80);
+  const Score ThreatByHangingPawn   = S( 71, 61);
+  const Score ThreatBySafePawn      = S(192,175);
+  const Score ThreatByRank          = S( 16,  3);
+  const Score Hanging               = S( 48, 27);
+  const Score WeakUnopposedPawn     = S(  5, 25);
+  const Score ThreatByPawnPush      = S( 38, 22);
+  const Score ThreatByAttackOnQueen = S( 38, 22);
+  const Score HinderPassedPawn      = S(  7,  0);
+  const Score TrappedBishopA1H1     = S( 50, 50);
 
   #undef S
   #undef V
@@ -302,7 +303,10 @@ namespace {
     Score score = SCORE_ZERO;
 
     attackedBy[Us][Pt] = 0;
-
+	
+    if (Pt == QUEEN)
+        attackedBy[Us][QUEEN_DIAGONAL] = 0;
+	
     while ((s = *pl++) != SQ_NONE)
     {
         // Find attacked squares, including x-ray attacks for bishops and rooks
@@ -316,6 +320,9 @@ namespace {
         attackedBy2[Us] |= attackedBy[Us][ALL_PIECES] & b;
         attackedBy[Us][ALL_PIECES] |= attackedBy[Us][Pt] |= b;
 
+        if (Pt == QUEEN)
+            attackedBy[Us][QUEEN_DIAGONAL] |= b & PseudoAttacks[BISHOP][s];
+		
         if (b & kingRing[Them])
         {
             kingAttackersCount[Us]++;
@@ -609,6 +616,13 @@ namespace {
 
     score += ThreatByPawnPush * popcount(b);
 
+    // Add a bonus for safe slider attack threats on opponent queen
+    safeThreats = ~pos.pieces(Us) & ~attackedBy2[Them] & attackedBy2[Us];
+    b =  (attackedBy[Us][BISHOP] & attackedBy[Them][QUEEN_DIAGONAL])
+       | (attackedBy[Us][ROOK  ] & attackedBy[Them][QUEEN] & ~attackedBy[Them][QUEEN_DIAGONAL]);
+
+    score += ThreatByAttackOnQueen * popcount(b & safeThreats);
+	
     if (T)
         Trace::add(THREAT, Us, score);
 
@@ -826,19 +840,10 @@ namespace {
     // the position object (material + piece square tables) and the material
     // imbalance. Score is computed internally from the white point of view.
     Score score=SCORE_ZERO;
-	bool safetyEvaluator=Options["Safety Evaluator"]; 
-	if(!safetyEvaluator){
-		score= pos.psq_score() + me->imbalance();
-		// Probe the pawn hash table
-		pe = Pawns::probe(pos);
-		if(!safetyEvaluator){
-			score += pe->pawns_score();
-		}
-    }
-	else{
-		// Probe the pawn hash table
-		pe = Pawns::probe(pos);
-	}
+	score= pos.psq_score() + me->imbalance();
+	// Probe the pawn hash table
+	pe = Pawns::probe(pos);
+	score += pe->pawns_score();
     Value v;
 
     // Main evaluation begins here
@@ -852,21 +857,26 @@ namespace {
 	score += evaluate_pieces<WHITE, ROOK  >() - evaluate_pieces<BLACK, ROOK  >();
 	score += evaluate_pieces<WHITE, QUEEN >() - evaluate_pieces<BLACK, QUEEN >();
 	score += mobility[WHITE] - mobility[BLACK];
-
-    score +=  evaluate_king<WHITE>()
-            - evaluate_king<BLACK>();
-
-    score +=  evaluate_threats<WHITE>()
-            - evaluate_threats<BLACK>();
-
-    if(!safetyEvaluator){
+    bool safetyEvaluator=Options["Safety Evaluator"];
+	if(!safetyEvaluator){
+		score +=  evaluate_king<WHITE>()
+		- evaluate_king<BLACK>();
+	}
+	else{
+		score =  evaluate_king<WHITE>()
+				- evaluate_king<BLACK>();	
+	}	
+	score +=  evaluate_threats<WHITE>()
+	- evaluate_threats<BLACK>();
+	if(!safetyEvaluator){
 		score +=  evaluate_passed_pawns<WHITE>()
-            - evaluate_passed_pawns<BLACK>();
+			- evaluate_passed_pawns<BLACK>();
 		if (pos.non_pawn_material() >= SpaceThreshold)
 			score +=  evaluate_space<WHITE>()
 					- evaluate_space<BLACK>();
-		score += evaluate_initiative(eg_value(score));
-    } 
+		score += evaluate_initiative(eg_value(score));	
+	}
+	score += Eval::Contempt[WHITE];
     // Interpolate between a middlegame and a (scaled by 'sf') endgame score
     ScaleFactor sf = evaluate_scale_factor(eg_value(score));
     v =  mg_value(score) * int(me->game_phase())
@@ -877,30 +887,14 @@ namespace {
     // In case of tracing add all remaining individual evaluation terms
     if (T)
     {
-        if(!safetyEvaluator){
-			Trace::add(MATERIAL, pos.psq_score());
-			Trace::add(IMBALANCE, me->imbalance());
-			Trace::add(PAWN, pe->pawns_score());
-			Trace::add(MOBILITY, mobility[WHITE], mobility[BLACK]);
-		}
-		else{
-			Trace::add(MATERIAL, SCORE_ZERO);
-			Trace::add(IMBALANCE, SCORE_ZERO);
-			Trace::add(PAWN, SCORE_ZERO);
-			Trace::add(MOBILITY, SCORE_ZERO, SCORE_ZERO);
-		}
-        
-        
+		Trace::add(MATERIAL, pos.psq_score());
+		Trace::add(IMBALANCE, me->imbalance());
+		Trace::add(PAWN, pe->pawns_score());
+		Trace::add(MOBILITY, mobility[WHITE], mobility[BLACK]);
         
         if (pos.non_pawn_material() >= SpaceThreshold)
-            if(!safetyEvaluator){
-				Trace::add(SPACE, evaluate_space<WHITE>()
-                            , evaluate_space<BLACK>());
-			}
-			else{
-				Trace::add(SPACE, SCORE_ZERO
-                            , SCORE_ZERO);			
-			}
+			Trace::add(SPACE, evaluate_space<WHITE>()
+						, evaluate_space<BLACK>());
         Trace::add(TOTAL, score);
     }
 
@@ -953,4 +947,11 @@ std::string Eval::trace(const Position& pos) {
   ss << "\nTotal Evaluation: " << to_cp(v) << " (white side)\n";
 
   return ss.str();
+}
+
+Score Eval::Contempt[COLOR_NB];
+
+Value Eval::score_to_value(Score s, const Position& pos) {
+   Phase phase = Material::probe(pos)->game_phase();
+   return (mg_value(s) * phase + eg_value(s) * (PHASE_MIDGAME - phase)) / PHASE_MIDGAME;
 }

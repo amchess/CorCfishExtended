@@ -4,7 +4,7 @@
   
   /*  
 	  The "Contempt" option has the default set to zero , but you can find good success with a setting of minus 10 to minus 30. Minus 10 would be used for stronger engines like Komodo and Houdini, for most other engines minus 30 is fine. A setting of as low as a plus 10 will help in securing a draw if needed. It's used for game and not analysis.
-	  Contempt=18 (not default), in particular, is very good for particular openings: Scandinavian Defense, Benoni, Rubinstein and Tromposky... The C version has the contempt's range from -100 to +100.
+	  Contempt=18 (not default), in particular, is very good for particular openings: Scandinavian Defense, Benoni, Rubinstein and Tromposky... The Cpp version has the dynamical contempt to improve performance aigainst weaker opponents. Based on my tests on long times, this doesn't weak the engine.
   
   */
   o["Contempt"]               << Option(0, -300, 300);

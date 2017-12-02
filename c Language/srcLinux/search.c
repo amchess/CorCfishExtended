@@ -280,7 +280,7 @@ void mainthread_search(void)
 
   // Check if there are threads with a better score than main thread
   Pos *bestThread = pos;
-  if (   option_value(OPT_MULTI_PV) == 1
+  if (    option_value(OPT_MULTI_PV) == 1
       && !Limits.depth
 //      && !Skill(option_value(OPT_SKILL_LEVEL)).enabled()
       &&  pos->rootMoves->move[0].pv[0] != 0)
@@ -493,11 +493,11 @@ skip_search:
     if (!Signals.stop)
       pos->completedDepth = pos->rootDepth;
 
-	if (rm->move[0].pv[0] != lastBestMove) {
+    if (rm->move[0].pv[0] != lastBestMove) {
       lastBestMove = rm->move[0].pv[0];
       lastBestMoveDepth = pos->rootDepth;
-    } 
-   
+    }
+
     // Have we found a "mate in x"?
     if (   Limits.mate
         && bestValue >= VALUE_MATE_IN_MAX_PLY
@@ -777,10 +777,8 @@ static void check_time(void)
   int elapsed = time_elapsed();
   TimePoint tick = Limits.startTime + elapsed;
 
-  if (tick - lastInfoTime >= 1000) {
+  if (tick - lastInfoTime >= 1000)
     lastInfoTime = tick;
-    dbg_print();
-  }
 
   // An engine may not stop pondering until told so by the GUI
   if (Limits.ponder)

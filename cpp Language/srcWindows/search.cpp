@@ -56,9 +56,12 @@ namespace Tablebases {
 
 namespace TB = Tablebases;
 
+using namespace Search;
 using std::string;
 using Eval::evaluate;
-using namespace Search;
+using Eval::score_to_value;
+using Eval::Contempt;
+extern Score Eval::Contempt[COLOR_NB];
 
 namespace {
 
@@ -216,10 +219,15 @@ void MainThread::search() {
   else
 	TT.infinite_search();
 
-  int contempt = Options["Contempt"] * PawnValueEg / 100; // From centipawns
-  bool wc = Options["White_Contempt"];
-  DrawValue[wc ? WHITE : us] = VALUE_DRAW + Value(contempt);
-  DrawValue[wc ? BLACK :~us] = VALUE_DRAW - Value(contempt);
+  int base_contempt = Options["Dynamic contempt"] * PawnValueEg / 100; // From centipawns
+  // gradially reduce contempt when previousScore is between -4 and -3 base_contempt.
+  base_contempt = std::min(base_contempt, std::max(0, (int(previousScore) + 4 * base_contempt )));
+  
+  Contempt[ us] =  make_score(base_contempt, 0);
+  Contempt[~us] = -Contempt[us];
+
+  DrawValue[ us] = VALUE_DRAW - score_to_value(Contempt[us], rootPos);
+  DrawValue[~us] = VALUE_DRAW + score_to_value(Contempt[us], rootPos);
 
   // Read search options
   bruteForce = Options["BruteForce"];

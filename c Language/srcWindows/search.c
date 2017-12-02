@@ -9,7 +9,7 @@
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-Stockfish is distributed in the hope that it will be useful,
+  Stockfish is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
@@ -154,8 +154,8 @@ void search_clear()
     return;
   }
 
-  Time.availableNodes = 0;  
-  
+  Time.availableNodes = 0;
+
   tt_clear();
   for (int i = 0; i < num_cmh_tables; i++)
     if (cmh_tables[i]) {
@@ -169,7 +169,7 @@ void search_clear()
     Pos *pos = Threads.pos[idx];
     stats_clear(pos->counterMoves);
     stats_clear(pos->history);
-	stats_clear(pos->captureHistory);
+    stats_clear(pos->captureHistory);
   }
 
   mainThread.previousScore = VALUE_INFINITE;
@@ -280,7 +280,7 @@ void mainthread_search(void)
 
   // Check if there are threads with a better score than main thread
   Pos *bestThread = pos;
-  if (   option_value(OPT_MULTI_PV) == 1
+  if (    option_value(OPT_MULTI_PV) == 1
       && !Limits.depth
 //      && !Skill(option_value(OPT_SKILL_LEVEL)).enabled()
       &&  pos->rootMoves->move[0].pv[0] != 0)
@@ -493,11 +493,11 @@ skip_search:
     if (!Signals.stop)
       pos->completedDepth = pos->rootDepth;
 
-	if (rm->move[0].pv[0] != lastBestMove) {
+    if (rm->move[0].pv[0] != lastBestMove) {
       lastBestMove = rm->move[0].pv[0];
       lastBestMoveDepth = pos->rootDepth;
-    } 
-   
+    }
+
     // Have we found a "mate in x"?
     if (   Limits.mate
         && bestValue >= VALUE_MATE_IN_MAX_PLY
@@ -522,14 +522,15 @@ skip_search:
                           bestValue - mainThread.previousScore };
 
         int improvingFactor = max(229, min(715, 357 + 119 * F[0] - 6 * F[1]));
-		int us = pos_stm();
+
+        int us = pos_stm();
         int thinkHard =   DrawValue[us] == bestValue
                        && Limits.time[us] - time_elapsed() > Limits.time[us ^ 1]
                        && pv_is_draw(pos);
 
         double unstablePvFactor = 1 + mainThread.bestMoveChanges + thinkHard;
 
-		// If the best move is stable over several iterations, reduce time
+        // If the best move is stable over several iterations, reduce time
         // for this move, the longer the move has been stable, the more.
         // Use part of the time gained from a previous stable move for the
         // current move.
@@ -537,9 +538,10 @@ skip_search:
         for (int i = 3; i < 6; i++)
           if (lastBestMoveDepth * i < pos->completedDepth && !thinkHard)
             timeReduction *= 1.3;
-        unstablePvFactor *= pow(mainThread.previousTimeReduction, 0.51) /timeReduction;
+        unstablePvFactor *= pow(mainThread.previousTimeReduction, 0.51) / timeReduction;
+
         if (   rm->size == 1
-			|| time_elapsed() > time_optimum() * unstablePvFactor * improvingFactor / 628)
+            || time_elapsed() > time_optimum() * unstablePvFactor * improvingFactor / 628)
         {
           // If we are allowed to ponder do not stop the search now but
           // keep pondering until the GUI sends "ponderhit" or "stop".
@@ -686,6 +688,7 @@ void update_capture_stats(const Pos *pos, Move move, Move *captures,
     cpth_update(*pos->captureHistory, moved_piece, to_sq(captures[i]), captured, -bonus);
   }
 }
+
 // update_stats() updates killers, history, countermove and countermove
 // plus follow-up move history when a new quiet best move is found.
 
@@ -774,10 +777,8 @@ static void check_time(void)
   int elapsed = time_elapsed();
   TimePoint tick = Limits.startTime + elapsed;
 
-  if (tick - lastInfoTime >= 1000) {
+  if (tick - lastInfoTime >= 1000)
     lastInfoTime = tick;
-    dbg_print();
-  }
 
   // An engine may not stop pondering until told so by the GUI
   if (Limits.ponder)

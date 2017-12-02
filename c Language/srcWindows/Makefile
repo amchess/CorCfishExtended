@@ -57,6 +57,7 @@ OBJS = benchmark.o bitbase.o bitboard.o endgame.o evaluate.o main.o \
 # pext = yes/no       --- -DUSE_PEXT       --- Use pext x86_64 asm-instruction
 # native = yes/no     --- -march=native    --- Optimize for local CPU
 # numa = yes/no       --- -DNUMA           --- Enable NUMA support
+# AVX = yes/no        --- -DUSE_AVX        --- Use AVX asm-instruction
 #
 # Note that Makefile is space sensitive, so when adding new architectures
 # or modifying existing flags, you have to make sure there are no extra spaces
@@ -65,14 +66,15 @@ OBJS = benchmark.o bitbase.o bitboard.o endgame.o evaluate.o main.o \
 ### 2.1. General and architecture defaults
 debug = no
 optimize = yes
-arch = x86_64
-bits = 64
-prefetch = yes
-popcnt = yes
-sse = yes
+arch = x86_32
+bits = 32
+prefetch = no
+popcnt = no
+sse = no
 pext = no
 native = no
 numa = yes
+AVX = no
 
 ### 2.2 Architecture specific
 
@@ -119,6 +121,15 @@ ifeq ($(ARCH),x86-64-bmi2)
 	pext = yes
 endif
 
+ifeq ($(ARCH),x86-64-avx)
+	arch = x86_64
+	bits = 64
+	prefetch = yes
+	popcnt = yes
+	sse = yes
+	AVX = yes
+endif
+
 ifeq ($(ARCH),armv7)
 	arch = armv7
 	prefetch = yes
@@ -140,7 +151,7 @@ endif
 
 ### 3.1 Selecting compiler (default = gcc)
 
-CFLAGS += -Wall -std=c11 $(EXTRACFLAGS)
+CFLAGS += -flto -Wall -std=c11 $(EXTRACFLAGS)
 DEPENDFLAGS += -std=c11
 LDFLAGS += $(EXTRALDFLAGS) -lm
 
@@ -162,11 +173,11 @@ ifeq ($(COMP),mingw)
 
 	ifeq ($(UNAME),Linux)
 		ifeq ($(bits),64)
-#			ifeq ($(shell which x86_64-w64-mingw32-cc-posix),)
+ 			ifeq ($(shell which x86_64-w64-mingw32-cc-posix),)
 				CC=x86_64-w64-mingw32-gcc
-#			else
-#				CC=x86_64-w64-mingw32-cc-posix
-#			endif
+			else
+				CC=x86_64-w64-mingw32-cc-posix
+			endif
 		else
 			ifeq ($(shell which i686-w64-mingw32-cc-posix),)
 				CC=i686-w64-mingw32-cc
@@ -179,7 +190,7 @@ ifeq ($(COMP),mingw)
 	endif
 
 	CFLAGS += -Wextra -Wshadow
-	LDFLAGS += #-static
+	LDFLAGS += -static
 endif
 
 ifeq ($(COMP),icc)
@@ -319,6 +330,11 @@ ifeq ($(pext),yes)
 	endif
 endif
 
+### 3.8 AVX
+ifeq ($(AVX),yes)
+		CFLAGS += -DUSE_AVX
+endif
+
 ### native
 ifeq ($(native),yes)
 	CFLAGS += -march=native
@@ -340,7 +356,7 @@ endif
 ifeq ($(comp),gcc)
 	ifeq ($(optimize),yes)
 	ifeq ($(debug),no)
-		CFLAGS += # -flto
+		CFLAGS +=  -flto
 		LDFLAGS += $(CFLAGS)
 	endif
 	endif
@@ -350,7 +366,7 @@ ifeq ($(comp),mingw)
 	ifeq ($(UNAME),Linux)
 	ifeq ($(optimize),yes)
 	ifeq ($(debug),no)
-		CFLAGS += # -flto
+		CFLAGS +=  -flto
 		LDFLAGS += $(CFLAGS)
 	endif
 	endif
