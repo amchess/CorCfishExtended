@@ -80,7 +80,11 @@ void init(OptionsMap& o) {
   o["Ponder"]                  << Option(false);
   o["MultiPV"]                 << Option(1, 1, 500);
   o["Skill Level"]             << Option(20, 0, 20);
-  //Time manager
+  //Tactical play
+  o["Tactical play"]          << Option();
+  o["King safe"]             << Option(100, 100, 1500);
+  o["Tactical"]              << Option(false);
+    //Time manager
   o["Time manager"]          << Option();
   o["Move Overhead"]           << Option(100, 0, 5000);
   o["Minimum Thinking Time"]    << Option(20, 0, 5000);

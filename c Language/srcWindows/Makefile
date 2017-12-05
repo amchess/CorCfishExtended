@@ -57,7 +57,6 @@ OBJS = benchmark.o bitbase.o bitboard.o endgame.o evaluate.o main.o \
 # pext = yes/no       --- -DUSE_PEXT       --- Use pext x86_64 asm-instruction
 # native = yes/no     --- -march=native    --- Optimize for local CPU
 # numa = yes/no       --- -DNUMA           --- Enable NUMA support
-# AVX = yes/no        --- -DUSE_AVX        --- Use AVX asm-instruction
 #
 # Note that Makefile is space sensitive, so when adding new architectures
 # or modifying existing flags, you have to make sure there are no extra spaces
@@ -74,7 +73,6 @@ sse = no
 pext = no
 native = no
 numa = yes
-AVX = no
 
 ### 2.2 Architecture specific
 
@@ -119,15 +117,6 @@ ifeq ($(ARCH),x86-64-bmi2)
 	popcnt = yes
 	sse = yes
 	pext = yes
-endif
-
-ifeq ($(ARCH),x86-64-avx)
-	arch = x86_64
-	bits = 64
-	prefetch = yes
-	popcnt = yes
-	sse = yes
-	AVX = yes
 endif
 
 ifeq ($(ARCH),armv7)
@@ -328,11 +317,6 @@ ifeq ($(pext),yes)
 	ifeq ($(comp),$(filter $(comp),gcc clang mingw))
 		CFLAGS += -mbmi2
 	endif
-endif
-
-### 3.8 AVX
-ifeq ($(AVX),yes)
-		CFLAGS += -DUSE_AVX
 endif
 
 ### native

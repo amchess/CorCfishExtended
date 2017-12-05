@@ -207,7 +207,7 @@ namespace {
     S(  9, 10), S( 2, 10), S( 1, -8), S(-20,-12),
     S(-20,-12), S( 1, -8), S( 2, 10), S(  9, 10)
   };
-  
+
   // KingProtector[PieceType-2] contains a bonus according to distance from king
   const Score KingProtector[] = { S(-3, -5), S(-4, -3), S(-3, 0), S(-1, 1) };
 
@@ -230,6 +230,7 @@ namespace {
   const Score ThreatByAttackOnQueen = S( 38, 22);
   const Score HinderPassedPawn      = S(  7,  0);
   const Score TrappedBishopA1H1     = S( 50, 50);
+
   #undef S
   #undef V
 
@@ -302,7 +303,7 @@ namespace {
     Score score = SCORE_ZERO;
 
     attackedBy[Us][Pt] = 0;
-
+	
     if (Pt == QUEEN)
         attackedBy[Us][QUEEN_DIAGONAL] = 0;
 	
@@ -341,12 +342,12 @@ namespace {
             // Bonus for outpost squares
             bb = OutpostRanks & ~pe->pawn_attacks_span(Them);
             if (bb & s)
-                score += Outpost[Pt == BISHOP][!!(attackedBy[Us][PAWN] & s)] * 2;
+                score += Outpost[Pt == BISHOP][bool(attackedBy[Us][PAWN] & s)] * 2;
             else
             {
                 bb &= b & ~pos.pieces(Us);
                 if (bb)
-                   score += Outpost[Pt == BISHOP][!!(attackedBy[Us][PAWN] & bb)];
+                   score += Outpost[Pt == BISHOP][bool(attackedBy[Us][PAWN] & bb)];
             }
 
             // Bonus when behind a pawn
@@ -387,7 +388,7 @@ namespace {
 
             // Bonus when on an open or semi-open file
             if (pe->semiopen_file(Us, file_of(s)))
-                score += RookOnFile[!!pe->semiopen_file(Them, file_of(s))];
+                score += RookOnFile[bool(pe->semiopen_file(Them, file_of(s)))];
 
             // Penalty when trapped by the king, even more if the king cannot castle
             else if (mob <= 3)
@@ -449,7 +450,7 @@ namespace {
         kingDanger =        kingAttackersCount[Them] * kingAttackersWeight[Them]
                     + 102 * kingAdjacentZoneAttacksCount[Them]
                     + 191 * popcount(kingRing[Us] & weak)
-                    + 143 * !!pos.pinned_pieces(Us)
+                    + 143 * bool(pos.pinned_pieces(Us))
                     - 848 * !pos.count<QUEEN>(Them)
                     -   9 * mg_value(score) / 8
                     +  40;
@@ -492,10 +493,13 @@ namespace {
 
         else if (b & other)
             score -= OtherCheck;
-
-        // Transform the kingDanger units into a Score, and substract it from the evaluation
+		
+		int kingSafe = Options["King safe"] / 100;
+		if (Options["Tactical"])
+			kingSafe = 5;        
+		// Transform the kingDanger units into a Score, and substract it from the evaluation
         if (kingDanger > 0)
-            score -= make_score(kingDanger * kingDanger / 4096, kingDanger / 16);
+            score -= make_score(kingDanger * kingSafe * kingDanger / 4096, kingDanger / 16);
     }
 
     // King tropism: firstly, find squares that opponent attacks in our king flank
@@ -866,7 +870,7 @@ namespace {
 				- evaluate_king<BLACK>();	
 	}	
 	score +=  evaluate_threats<WHITE>()
-			- evaluate_threats<BLACK>();
+	- evaluate_threats<BLACK>();
 	if(!safetyEvaluator){
 		score +=  evaluate_passed_pawns<WHITE>()
 			- evaluate_passed_pawns<BLACK>();
