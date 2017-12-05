@@ -31,7 +31,11 @@
   o["Ponder"]                  << Option(false);
   o["MultiPV"]                 << Option(1, 1, 500);
   o["Skill Level"]             << Option(20, 0, 20);
-  
+
+  //Tactical play
+  o["Tactical play"]          << Option();
+  o["King safe"]             << Option(100, 100, 1500);  
+
   //Time manager
   o["Time manager"]          << Option();
   /*

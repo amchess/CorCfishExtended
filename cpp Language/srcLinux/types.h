@@ -91,10 +91,22 @@ const bool HasPext = true;
 const bool HasPext = false;
 #endif
 
+#ifdef USE_AVX
+const bool UseAVX = true;
+#else
+const bool UseAVX = false;
+#endif
+
 #ifdef IS_64BIT
 const bool Is64Bit = true;
 #else
 const bool Is64Bit = false;
+#endif
+
+#ifdef USE_AVX2
+const bool UseAVX2 = true;
+#else
+const bool UseAVX2 = false;
 #endif
 
 typedef uint64_t Key;
@@ -128,14 +140,14 @@ enum MoveType {
 };
 
 enum Color {
-  WHITE, BLACK, COLOR_NB = 2
+  WHITE, BLACK, NO_COLOR, COLOR_NB = 2
 };
 
 enum CastlingSide {
   KING_SIDE, QUEEN_SIDE, CASTLING_SIDE_NB = 2
 };
 
-enum CastlingRight {
+enum CastlingRight {  // Defined as in PolyGlot book hash key
   NO_CASTLING,
   WHITE_OO,
   WHITE_OOO = WHITE_OO << 1,
@@ -270,11 +282,13 @@ constexpr Score make_score(int mg, int eg) {
 /// according to the standard a simple cast to short is implementation defined
 /// and so is a right shift of a signed integer.
 inline Value eg_value(Score s) {
+
   union { uint16_t u; int16_t s; } eg = { uint16_t(unsigned(s + 0x8000) >> 16) };
   return Value(eg.s);
 }
 
 inline Value mg_value(Score s) {
+
   union { uint16_t u; int16_t s; } mg = { uint16_t(unsigned(s)) };
   return Value(mg.s);
 }
@@ -295,6 +309,7 @@ inline T& operator--(T& d) { return d = T(int(d) - 1); }           \
 constexpr T operator/(T d, int i) { return T(int(d) / i); }        \
 constexpr int operator/(T d1, T d2) { return int(d1) / int(d2); }  \
 inline T& operator*=(T& d, int i) { return d = T(int(d) * i); }    \
+inline T& operator/=(T& d, int i) { return d = T(int(d) / i); }
 
 ENABLE_FULL_OPERATORS_ON(Value)
 ENABLE_FULL_OPERATORS_ON(PieceType)
@@ -319,6 +334,23 @@ inline Value& operator-=(Value& v, int i) { return v = v - i; }
 /// Only declared but not defined. We don't want to multiply two scores due to
 /// a very high risk of overflow. So user should explicitly convert to integer.
 Score operator*(Score s1, Score s2) = delete;
+
+/// Division of a Score must be handled separately for each term
+inline Score operator/(Score s, int i) {
+  return make_score(mg_value(s) / i, eg_value(s) / i);
+}
+
+/// Multiplication of a Score by an integer. We check for overflow in debug mode.
+inline Score operator*(Score s, int i) {
+
+  Score result = Score(int(s) * i);
+
+  assert(eg_value(result) == (i * eg_value(s)));
+  assert(mg_value(result) == (i * mg_value(s)));
+  assert((i == 0) || (result / i) == s );
+
+  return result;
+}
 
 constexpr Color operator~(Color c) {
   return Color(c ^ BLACK); // Toggle color
@@ -428,3 +460,5 @@ constexpr bool is_ok(Move m) {
 }
 
 #endif // #ifndef TYPES_H_INCLUDED
+
+
