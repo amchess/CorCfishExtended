@@ -119,7 +119,7 @@ void Try_Get_LockMemory_Privileges()
 /// measured in megabytes. Transposition table consists of a power of 2 number
 /// of clusters and each cluster consists of ClusterSize number of TTEntry.
 
-void TranspositionTable::resize(int64_t mbSize) {
+void TranspositionTable::resize(size_t mbSize) {
 
   if (mbSize == 0)
       mbSize = mbSize_last_used;
@@ -133,7 +133,7 @@ void TranspositionTable::resize(int64_t mbSize) {
   Try_Get_LockMemory_Privileges();
 #endif
 
-  size_t newClusterCount = size_t(1) << msb((mbSize * 1024 * 1024) / sizeof(Cluster));
+  size_t newClusterCount = mbSize * 1024 * 1024 / sizeof(Cluster);
 
   if (newClusterCount == clusterCount)
   {

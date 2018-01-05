@@ -22,7 +22,6 @@
 #include <cassert>
 #include <ostream>
 #include <iostream>
-#include "misc.h"
 #include <thread>
 
 #include "evaluate.h"
@@ -35,7 +34,6 @@
 #include "tzbook.h"
 
 using std::string;
-using namespace std;
 
 UCI::OptionsMap Options; // Global object
 
@@ -53,7 +51,7 @@ void SaveHashtoFile(const Option&) { TT.save(); }
 void LoadHashfromFile(const Option&) { TT.load(); }
 void LoadEpdToHash(const Option&) { TT.load_epd_to_hash(); }
 
-void on_brainbook_path(const Option& o) { tzbook.init(o); }
+void on_brainbook_path(const Option& o) { tzbook.init(o, true); }
 void on_book_move2_prob(const Option& o) { tzbook.set_book_move2_probability(o); }
 
 /// Our case insensitive less() function as required by UCI protocol
@@ -68,7 +66,8 @@ bool CaseInsensitiveLess::operator() (const string& s1, const string& s2) const 
 
 void init(OptionsMap& o) {
 
-  const int MaxHashMB = Is64Bit ? 1024 * 1024 : 2048;
+  // at most 2^32 clusters.
+  const int MaxHashMB = Is64Bit ? 131072 : 2048;
 
   unsigned int n = std::thread::hardware_concurrency();
   if (!n) n = 1;
@@ -87,7 +86,7 @@ void init(OptionsMap& o) {
   o["Tactical"]              << Option(false);
     //Time manager
   o["Time manager"]          << Option();
-  o["Move Overhead"]           << Option(100, 0, 5000);
+  o["Move Overhead"]           << Option(30, 0, 5000);
   o["Minimum Thinking Time"]    << Option(20, 0, 5000);
   o["Slow Mover"]               << Option(89, 10, 1000);
   o["nodestime"]               << Option(0, 0, 10000);
@@ -117,6 +116,7 @@ void init(OptionsMap& o) {
   o["Variety"]               << Option (0, 0, 8);
   //Polyglot Book management
   o["Polyglot Book management"] << Option();
+  o["OwnBook"]                  << Option(false);
   o["Best Book Move"]          << Option(false);
   o["Book File"]               << Option("book.bin");
 

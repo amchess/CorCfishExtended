@@ -89,11 +89,11 @@ int main(int argc, char* argv[]) {
 	Pawns::init();
 	Tablebases::init(Options["SyzygyPath"]);
 	TT.resize(Options["Hash"]);
-	Threads.init(Options["Threads"]);
+	Threads.set(Options["Threads"]);
 	Search::clear(); // After threads are up
-	tzbook.init(Options["BookPath"]);
+
 	UCI::loop(argc, argv);
 
-	Threads.exit();
+	Threads.set(0);
 	return 0;
 }

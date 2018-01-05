@@ -30,7 +30,8 @@ class Position;
 namespace Eval {
 
 const Value Tempo = Value(20);     // Must be visible to search
-extern Score Contempt[COLOR_NB];   // Must be visible to search
+	
+extern Score Contempt;
 
 Value evaluate(const Position& pos);
 
