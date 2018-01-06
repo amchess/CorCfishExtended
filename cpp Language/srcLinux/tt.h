@@ -1,5 +1,5 @@
 /*
-  Stockfish, a UCI chess playing engine derived from Glaurung 2.1
+  Stockfish, a UCI chess playing engine derived from Stockfish
   Copyright (C) 2004-2008 Tord Romstad (Glaurung author)
   Copyright (C) 2008-2015 Marco Costalba, Joona Kiiski, Tord Romstad
   Copyright (C) 2015-2017 Marco Costalba, Joona Kiiski, Gary Linscott, Tord Romstad
@@ -103,21 +103,21 @@ public:
   uint8_t generation() const { return generation8; }
   TTEntry* probe(const Key key, bool& found) const;
   int hashfull() const;
-  void resize(int64_t mbSize);
+  void resize(size_t mbSize);
   void clear();
   void set_hash_file_name(const std::string& fname);
   bool save();
   void load();
   void load_epd_to_hash();
-  std::string hashfilename = "hash.hsh";
+  std::string hashfilename = "Stockfish_hash.hsh";
 
-  // The lowest order bits of the key are used to get the index of the cluster
+  // The 32 lowest order bits of the key are used to get the index of the cluster
   TTEntry* first_entry(const Key key) const {
-    return &table[(size_t)key & (clusterCount - 1)].entry[0];
+    return &table[(uint32_t(key) * uint64_t(clusterCount)) >> 32].entry[0];
   }
 
 private:
-  int64_t  mbSize_last_used;
+  size_t  mbSize_last_used;
 
 #ifdef _WIN32
   bool large_pages_used;

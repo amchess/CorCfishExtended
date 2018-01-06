@@ -162,7 +162,9 @@ void Position::init() {
 Position& Position::set(const string& fenStr, bool isChess960, StateInfo* si, Thread* th) {
 /*
    A FEN string defines a particular position using only the ASCII character set.
+
    A FEN string contains six fields separated by a space. The fields are:
+
    1) Piece placement (from white's perspective). Each rank is described, starting
       with rank 8 and ending with rank 1. Within each rank, the contents of each
       square are described from file A through file H. Following the Standard
@@ -171,19 +173,24 @@ Position& Position::set(const string& fenStr, bool isChess960, StateInfo* si, Th
       letters ("PNBRQK") whilst Black uses lowercase ("pnbrqk"). Blank squares are
       noted using digits 1 through 8 (the number of blank squares), and "/"
       separates ranks.
+
    2) Active color. "w" means white moves next, "b" means black.
+
    3) Castling availability. If neither side can castle, this is "-". Otherwise,
       this has one or more letters: "K" (White can castle kingside), "Q" (White
       can castle queenside), "k" (Black can castle kingside), and/or "q" (Black
       can castle queenside).
+
    4) En passant target square (in algebraic notation). If there's no en passant
       target square, this is "-". If a pawn has just made a 2-square move, this
       is the position "behind" the pawn. This is recorded only if there is a pawn
       in position to make an en passant capture, and if there really is a pawn
       that might have advanced two squares.
+
    5) Halfmove clock. This is the number of halfmoves since the last pawn advance
       or capture. This is used to determine if a draw can be claimed under the
       fifty-move rule.
+
    6) Fullmove number. The number of the full move. It starts at 1, and is
       incremented after Black's move.
 */
@@ -204,10 +211,10 @@ Position& Position::set(const string& fenStr, bool isChess960, StateInfo* si, Th
   while ((ss >> token) && !isspace(token))
   {
       if (isdigit(token))
-          sq += Square(token - '0'); // Advance the given number of files
+          sq += (token - '0') * EAST; // Advance the given number of files
 
       else if (token == '/')
-          sq -= Square(16);
+          sq += 2 * SOUTH;
 
       else if ((idx = PieceToChar.find(token)) != string::npos)
       {
@@ -215,7 +222,6 @@ Position& Position::set(const string& fenStr, bool isChess960, StateInfo* si, Th
           ++sq;
       }
   }
-
   // 2. Active color
   ss >> token;
   sideToMove = (token == 'w' ? WHITE : BLACK);
@@ -780,7 +786,7 @@ void Position::do_move(Move m, StateInfo& newSt, bool givesCheck) {
       if (   (int(to) ^ int(from)) == 16
           && (attacks_from<PAWN>(to - pawn_push(us), us) & pieces(them, PAWN)))
       {
-          st->epSquare = (from + to) / 2;
+          st->epSquare = to - pawn_push(us);
           k ^= Zobrist::enpassant[file_of(st->epSquare)];
       }
 
@@ -1063,9 +1069,9 @@ bool Position::see_ge(Move m, Value threshold) const {
       balance = -balance-1;
       stm = ~stm;
   }
-  
+
   // If the opponent gave up we win, otherwise we lose.
-  return opponentToMove;  
+  return opponentToMove;
 }
 
 

@@ -42,16 +42,16 @@ int main(int argc, char* argv[]) {
   Bitboards::init();
   Position::init();
   Bitbases::init();
-  Search::init(Options["Clean Search"]);
+  Search::init();
   Pawns::init();
   Tablebases::init(Options["SyzygyPath"]);
   TT.resize(Options["Hash"]);
-  Threads.init(Options["Threads"]);
+  Threads.set(Options["Threads"]);
   tzbook.init(Options["BookPath"]);
   Search::clear(); // After threads are up
 
   UCI::loop(argc, argv);
 
-  Threads.exit();
+  Threads.set(0);
   return 0;
 }

@@ -2,7 +2,7 @@
   Stockfish, a UCI chess playing engine derived from Glaurung 2.1
   Copyright (C) 2004-2008 Tord Romstad (Glaurung author)
   Copyright (C) 2008-2015 Marco Costalba, Joona Kiiski, Tord Romstad
-  Copyright (C) 2015-2017 Marco Costalba, Joona Kiiski, Gary Linscott, Tord Romstad
+  Copyright (C) 2015-2018 Marco Costalba, Joona Kiiski, Gary Linscott, Tord Romstad
 
   Stockfish is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -91,22 +91,10 @@ const bool HasPext = true;
 const bool HasPext = false;
 #endif
 
-#ifdef USE_AVX
-const bool UseAVX = true;
-#else
-const bool UseAVX = false;
-#endif
-
 #ifdef IS_64BIT
 const bool Is64Bit = true;
 #else
 const bool Is64Bit = false;
-#endif
-
-#ifdef USE_AVX2
-const bool UseAVX2 = true;
-#else
-const bool UseAVX2 = false;
 #endif
 
 typedef uint64_t Key;
@@ -140,14 +128,14 @@ enum MoveType {
 };
 
 enum Color {
-  WHITE, BLACK, NO_COLOR, COLOR_NB = 2
+  WHITE, BLACK, COLOR_NB = 2
 };
 
 enum CastlingSide {
   KING_SIDE, QUEEN_SIDE, CASTLING_SIDE_NB = 2
 };
 
-enum CastlingRight {  // Defined as in PolyGlot book hash key
+enum CastlingRight {
   NO_CASTLING,
   WHITE_OO,
   WHITE_OOO = WHITE_OO << 1,
@@ -235,7 +223,7 @@ enum Depth : int {
 
 static_assert(!(ONE_PLY & (ONE_PLY - 1)), "ONE_PLY is not a power of 2");
 
-enum Square {
+enum Square : int {
   SQ_A1, SQ_B1, SQ_C1, SQ_D1, SQ_E1, SQ_F1, SQ_G1, SQ_H1,
   SQ_A2, SQ_B2, SQ_C2, SQ_D2, SQ_E2, SQ_F2, SQ_G2, SQ_H2,
   SQ_A3, SQ_B3, SQ_C3, SQ_D3, SQ_E3, SQ_F3, SQ_G3, SQ_H3,
@@ -246,8 +234,10 @@ enum Square {
   SQ_A8, SQ_B8, SQ_C8, SQ_D8, SQ_E8, SQ_F8, SQ_G8, SQ_H8,
   SQ_NONE,
 
-  SQUARE_NB = 64,
+  SQUARE_NB = 64
+};
 
+enum Direction : int {
   NORTH =  8,
   EAST  =  1,
   SOUTH = -NORTH,
@@ -282,13 +272,11 @@ constexpr Score make_score(int mg, int eg) {
 /// according to the standard a simple cast to short is implementation defined
 /// and so is a right shift of a signed integer.
 inline Value eg_value(Score s) {
-
   union { uint16_t u; int16_t s; } eg = { uint16_t(unsigned(s + 0x8000) >> 16) };
   return Value(eg.s);
 }
 
 inline Value mg_value(Score s) {
-
   union { uint16_t u; int16_t s; } mg = { uint16_t(unsigned(s)) };
   return Value(mg.s);
 }
@@ -298,31 +286,37 @@ constexpr T operator+(T d1, T d2) { return T(int(d1) + int(d2)); } \
 constexpr T operator-(T d1, T d2) { return T(int(d1) - int(d2)); } \
 constexpr T operator-(T d) { return T(-int(d)); }                  \
 inline T& operator+=(T& d1, T d2) { return d1 = d1 + d2; }         \
-inline T& operator-=(T& d1, T d2) { return d1 = d1 - d2; }         \
+inline T& operator-=(T& d1, T d2) { return d1 = d1 - d2; }
+
+#define ENABLE_INCR_OPERATORS_ON(T)                                \
+inline T& operator++(T& d) { return d = T(int(d) + 1); }           \
+inline T& operator--(T& d) { return d = T(int(d) - 1); }
 
 #define ENABLE_FULL_OPERATORS_ON(T)                                \
 ENABLE_BASE_OPERATORS_ON(T)                                        \
+ENABLE_INCR_OPERATORS_ON(T)                                        \
 constexpr T operator*(int i, T d) { return T(i * int(d)); }        \
 constexpr T operator*(T d, int i) { return T(int(d) * i); }        \
-inline T& operator++(T& d) { return d = T(int(d) + 1); }           \
-inline T& operator--(T& d) { return d = T(int(d) - 1); }           \
 constexpr T operator/(T d, int i) { return T(int(d) / i); }        \
 constexpr int operator/(T d1, T d2) { return int(d1) / int(d2); }  \
 inline T& operator*=(T& d, int i) { return d = T(int(d) * i); }    \
 inline T& operator/=(T& d, int i) { return d = T(int(d) / i); }
 
 ENABLE_FULL_OPERATORS_ON(Value)
-ENABLE_FULL_OPERATORS_ON(PieceType)
-ENABLE_FULL_OPERATORS_ON(Piece)
-ENABLE_FULL_OPERATORS_ON(Color)
 ENABLE_FULL_OPERATORS_ON(Depth)
-ENABLE_FULL_OPERATORS_ON(Square)
-ENABLE_FULL_OPERATORS_ON(File)
-ENABLE_FULL_OPERATORS_ON(Rank)
+ENABLE_FULL_OPERATORS_ON(Direction)
+
+ENABLE_INCR_OPERATORS_ON(PieceType)
+ENABLE_INCR_OPERATORS_ON(Piece)
+ENABLE_INCR_OPERATORS_ON(Color)
+ENABLE_INCR_OPERATORS_ON(Square)
+ENABLE_INCR_OPERATORS_ON(File)
+ENABLE_INCR_OPERATORS_ON(Rank)
 
 ENABLE_BASE_OPERATORS_ON(Score)
 
 #undef ENABLE_FULL_OPERATORS_ON
+#undef ENABLE_INCR_OPERATORS_ON
 #undef ENABLE_BASE_OPERATORS_ON
 
 /// Additional operators to add integers to a Value
@@ -331,9 +325,15 @@ constexpr Value operator-(Value v, int i) { return Value(int(v) - i); }
 inline Value& operator+=(Value& v, int i) { return v = v + i; }
 inline Value& operator-=(Value& v, int i) { return v = v - i; }
 
+/// Additional operators to add a Direction to a Square
+inline Square operator+(Square s, Direction d) { return Square(int(s) + int(d)); }
+inline Square operator-(Square s, Direction d) { return Square(int(s) - int(d)); }
+inline Square& operator+=(Square &s, Direction d) { return s = s + d; }
+inline Square& operator-=(Square &s, Direction d) { return s = s - d; }
+
 /// Only declared but not defined. We don't want to multiply two scores due to
 /// a very high risk of overflow. So user should explicitly convert to integer.
-Score operator*(Score s1, Score s2) = delete;
+Score operator*(Score, Score) = delete;
 
 /// Division of a Score must be handled separately for each term
 inline Score operator/(Score s, int i) {
@@ -358,6 +358,10 @@ constexpr Color operator~(Color c) {
 
 constexpr Square operator~(Square s) {
   return Square(s ^ SQ_A8); // Vertical flip SQ_A1 -> SQ_A8
+}
+
+constexpr File operator~(File f) {
+  return File(f ^ FILE_H); // Horizontal flip FILE_A -> FILE_H
 }
 
 constexpr Piece operator~(Piece pc) {
@@ -422,7 +426,7 @@ inline bool opposite_colors(Square s1, Square s2) {
   return ((s >> 3) ^ s) & 1;
 }
 
-constexpr Square pawn_push(Color c) {
+constexpr Direction pawn_push(Color c) {
   return c == WHITE ? NORTH : SOUTH;
 }
 

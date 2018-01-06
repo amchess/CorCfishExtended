@@ -39,7 +39,7 @@ TZBook::~TZBook()
 }
 
 
-void TZBook::init(const std::string& path)
+void TZBook::init(const std::string& path, bool to_uci)
 {
     if (path.length() == 0) return;
 
@@ -58,7 +58,7 @@ void TZBook::init(const std::string& path)
 	if (fpt == NULL)
 	{
 #endif
-		sync_cout << "info string Could not open " << path << sync_endl;
+		sync_cout << (to_uci ? "info string ": "") << "Could not open " << path << sync_endl;
         return;
     }
 

@@ -53,7 +53,7 @@ void SaveHashtoFile(const Option&) { TT.save(); }
 void LoadHashfromFile(const Option&) { TT.load(); }
 void LoadEpdToHash(const Option&) { TT.load_epd_to_hash(); }
 
-void on_brainbook_path(const Option& o) { tzbook.init(o); }
+void on_brainbook_path(const Option& o) { tzbook.init(o, true); }
 void on_book_move2_prob(const Option& o) { tzbook.set_book_move2_probability(o); }
 
 /// Our case insensitive less() function as required by UCI protocol
@@ -68,7 +68,8 @@ bool CaseInsensitiveLess::operator() (const string& s1, const string& s2) const 
 
 void init(OptionsMap& o) {
 
-  const int MaxHashMB = Is64Bit ? 1024 * 1024 : 2048;
+  // at most 2^32 clusters.
+  const int MaxHashMB = Is64Bit ? 131072 : 2048;
 
   unsigned int n = std::thread::hardware_concurrency();
   if (!n) n = 1;
@@ -77,10 +78,11 @@ void init(OptionsMap& o) {
   o["Dynamic contempt"]               << Option(0, -100, 100);
   o["Threads"]                 << Option(n, 1, 512, on_threads);
   o["Hash"]                    << Option(128, 1, MaxHashMB, on_hash_size);
-  o["Clear Hash"]              << Option(on_clear_hash);
+  o["Clear Hash"]               << Option(on_clear_hash);
   o["Ponder"]                  << Option(false);
   o["MultiPV"]                 << Option(1, 1, 500);
   o["Skill Level"]             << Option(20, 0, 20);
+  o["Large Pages"]              << Option(true, on_large_pages);
   //Tactical play
   o["Tactical play"]          << Option();
   o["King safe"]             << Option(100, 100, 1500);
@@ -95,7 +97,7 @@ void init(OptionsMap& o) {
   //Hash file management
   o["Hash file management"]          << Option();
   o["NeverClearHash"]		   << Option(false);
-  o["HashFile"]		           << Option("hash.hsh", on_HashFile);
+  o["HashFile"]		           << Option("CorchessExtended_hash.hsh", on_HashFile);
   o["SaveHashtoFile"]		   << Option(SaveHashtoFile);
   o["LoadHashfromFile"]		   << Option(LoadHashfromFile);
   o["LoadEpdToHash"]            << Option(LoadEpdToHash);
@@ -107,7 +109,6 @@ void init(OptionsMap& o) {
   o["Syzygy50MoveRule"]        << Option(true);
   o["SyzygyProbeLimit"]        << Option(6, 0, 6);
 
-  o["Large Pages"]             << Option(true, on_large_pages);
   //Correspondence section
   o["Correspondence Chess Analyzer"]     << Option();
   o["Analysis Mode"]     << Option(false);

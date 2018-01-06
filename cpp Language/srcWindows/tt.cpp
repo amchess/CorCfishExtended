@@ -1,5 +1,5 @@
 /*
-  Stockfish, a UCI chess playing engine derived from Glaurung 2.1
+  Stockfish, a UCI chess playing engine derived from Stockfish
   Copyright (C) 2004-2008 Tord Romstad (Glaurung author)
   Copyright (C) 2008-2015 Marco Costalba, Joona Kiiski, Tord Romstad
   Copyright (C) 2015-2017 Marco Costalba, Joona Kiiski, Gary Linscott, Tord Romstad
@@ -119,7 +119,7 @@ void Try_Get_LockMemory_Privileges()
 /// measured in megabytes. Transposition table consists of a power of 2 number
 /// of clusters and each cluster consists of ClusterSize number of TTEntry.
 
-void TranspositionTable::resize(int64_t mbSize) {
+void TranspositionTable::resize(size_t mbSize) {
 
   if (mbSize == 0)
       mbSize = mbSize_last_used;
@@ -133,7 +133,7 @@ void TranspositionTable::resize(int64_t mbSize) {
   Try_Get_LockMemory_Privileges();
 #endif
 
-  size_t newClusterCount = size_t(1) << msb((mbSize * 1024 * 1024) / sizeof(Cluster));
+  size_t newClusterCount = mbSize * 1024 * 1024 / sizeof(Cluster);
 
   if (newClusterCount == clusterCount)
   {
@@ -246,7 +246,7 @@ void TranspositionTable::load() {
 	file.ignore(std::numeric_limits<std::streamsize>::max());
 	std::streamsize size = file.gcount();
 	file.clear();   //  Since ignore will have set eof.
-	resize(size / 1024 / 1024);
+	resize(size_t(size / 1024 / 1024));
 	file.seekg(0, std::ios::beg);
 	file.read(reinterpret_cast<char *>(table), clusterCount * sizeof(Cluster));
 }
