@@ -2,7 +2,7 @@
 #define CONFIG_H
 
 #define PEDANTIC
-#define LONG_MATES
+//#define LONG_MATES
 
 #ifdef USE_PEXT
 //#define BMI2_PLAIN
@@ -12,6 +12,8 @@
 #define MAGIC_PLAIN
 //#define MAGIC_FANCY
 #endif
+
+//#define BIG_TT
 
 #endif
 

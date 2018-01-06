@@ -109,7 +109,13 @@ struct Cluster {
 typedef struct Cluster Cluster;
 
 struct TranspositionTable {
+#ifdef BIG_TT
   size_t mask;         // clusterCount - 1
+  size_t clusterCount;
+#else
+  size_t clusterCount;
+  size_t mask;         // clusterCount - 1
+#endif
   Cluster *table;
   void *mem;
   size_t alloc_size;

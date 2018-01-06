@@ -106,16 +106,16 @@
 #define USE_AVX 0
 #endif
 
-#ifdef IS_64BIT
-#define Is64Bit 1
-#else
-#define Is64Bit 0
-#endif
-
 #ifdef USE_AVX2
 #define USE_AVX2 1
 #else
 #define USE_AVX2 0
+#endif
+
+#ifdef IS_64BIT
+#define Is64Bit 1
+#else
+#define Is64Bit 0
 #endif
 
 #ifdef NUMA
@@ -312,17 +312,15 @@ INLINE int make_castling_right(int c, int s)
 
 #define SQ_NONE 64
 
-#define DELTA_N  8
-#define DELTA_E  1
-#define DELTA_S -8
-#define DELTA_W -1
+#define NORTH  8
+#define EAST  1
+#define SOUTH -8
+#define WEST -1
 
-#define DELTA_NN (DELTA_N + DELTA_N)
-#define DELTA_NE (DELTA_N + DELTA_E)
-#define DELTA_SE (DELTA_S + DELTA_E)
-#define DELTA_SS (DELTA_S + DELTA_S)
-#define DELTA_SW (DELTA_S + DELTA_W)
-#define DELTA_NW (DELTA_N + DELTA_W)
+#define NORTH_EAST (NORTH + EAST)
+#define SOUTH_EAST (SOUTH + EAST)
+#define SOUTH_WEST (SOUTH + WEST)
+#define NORTH_WEST (NORTH + WEST)
 
 #define FILE_A 0
 #define FILE_B 1

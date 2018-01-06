@@ -60,8 +60,7 @@ Value search_NonPV(Pos *pos, Stack *ss, Value alpha, Depth depth, int cutNode)
   if (!rootNode) {
     // Step 2. Check for aborted search and immediate draw
     if (load_rlx(Signals.stop) || is_draw(pos) || ss->ply >= MAX_PLY)
-      return ss->ply >= MAX_PLY && !inCheck ? evaluate(pos)
-                                            : DrawValue[pos_stm()];
+      return ss->ply >= MAX_PLY && !inCheck ? evaluate(pos) : VALUE_DRAW;
 
     // Step 3. Mate distance pruning. Even if we mate at the next move our
     // score would be at best mate_in(ss->ply+1), but if alpha is already
@@ -94,7 +93,11 @@ Value search_NonPV(Pos *pos, Stack *ss, Value alpha, Depth depth, int cutNode)
   // partial search to overwrite a previous full search TT value, so we
   // use a different position key in case of an excluded move.
   excludedMove = ss->excludedMove;
+#ifdef BIG_TT
   posKey = pos_key() ^ (Key)excludedMove;
+#else
+  posKey = pos_key() ^ (Key)(excludedMove << 16);
+#endif
   tte = tt_probe(posKey, &ttHit);
   ttValue = ttHit ? value_from_tt(tte_value(tte), ss->ply) : VALUE_NONE;
   ttMove =  rootNode ? pos->rootMoves->move[pos->PVIdx].pv[0]
@@ -187,7 +190,7 @@ Value search_NonPV(Pos *pos, Stack *ss, Value alpha, Depth depth, int cutNode)
 
   // Step 5. Evaluate the position statically
   if (inCheck) {
-    ss->staticEval = eval = VALUE_NONE;
+    ss->staticEval = VALUE_NONE;
     goto moves_loop;
   } else if (ttHit) {
     // Never assume anything on values stored in TT
@@ -207,7 +210,7 @@ Value search_NonPV(Pos *pos, Stack *ss, Value alpha, Depth depth, int cutNode)
              ss->staticEval, tt_generation());
   }
 
-  if (ss->skipEarlyPruning)
+  if (ss->skipEarlyPruning || !pos_non_pawn_material(pos_stm()))
     goto moves_loop;
 
   if ( !option_value(OPT_BRUTEFORCE)){
@@ -267,14 +270,25 @@ Value search_NonPV(Pos *pos, Stack *ss, Value alpha, Depth depth, int cutNode)
       if (nullValue >= VALUE_MATE_IN_MAX_PLY)
          nullValue = beta;
 
-      if (abs(beta) < VALUE_KNOWN_WIN)
-		return nullValue;
+      if (depth < 12 * ONE_PLY && abs(beta) < VALUE_KNOWN_WIN)
+         return nullValue;
 
       // Do verification search at high depths
+      R += ONE_PLY;
+      // Disable null move pruning for side to move for the first part of
+      // the remaining search tree
+      int nmp_ply = pos->nmp_ply;
+      int pair = pos->pair;
+      pos->nmp_ply = ss->ply + 3 * (depth-R) / (4 * ONE_PLY);
+      pos->pair = ss->ply % 2 == 0;
+
       ss->skipEarlyPruning = 1;
-      Value v = depth-R < ONE_PLY ? qsearch_NonPV_false(pos, ss, beta-1, DEPTH_ZERO)
-                                  :  search_NonPV(pos, ss, beta-1, depth-R, 0);
+      Value v =  depth-R < ONE_PLY
+               ? qsearch_NonPV_false(pos, ss, beta-1, DEPTH_ZERO)
+               : search_NonPV(pos, ss, beta-1, depth-R, 0);
       ss->skipEarlyPruning = 0;
+      pos->pair = pair;
+      pos->nmp_ply = nmp_ply;
 
       if (v >= beta)
         return nullValue;
@@ -341,7 +355,7 @@ moves_loop: // When in check search starts from here.
   singularExtensionNode =   !rootNode
                          &&  depth >= 8 * ONE_PLY
                          &&  ttMove
-                         && !excludedMove // Recursive singular search is not allowed
+                         && !excludedMove // No recursive singular search
                          && (tte_bound(tte) & BOUND_LOWER)
                          &&  tte_depth(tte) >= depth - 3 * ONE_PLY;
   skipQuiets = 0;
@@ -350,7 +364,8 @@ moves_loop: // When in check search starts from here.
   pvExact = PvNode && ttHit && tte_bound(tte) == BOUND_EXACT;
 
   // Step 11. Loop through moves
-  // Loop through all pseudo-legal moves until no moves remain or a beta cutoff occurs
+  // Loop through all pseudo-legal moves until no moves remain or a beta
+  // cutoff occurs
   while ((move = next_move(pos, skipQuiets))) {
     assert(move_is_ok(move));
 
@@ -392,7 +407,7 @@ moves_loop: // When in check search starts from here.
 
     givesCheck = gives_check(pos, ss, move);
 
-    moveCountPruning =   depth < 16 * ONE_PLY
+    moveCountPruning = depth < 16 * ONE_PLY
                 && moveCount >= FutilityMoveCounts[improving][depth / ONE_PLY];
 
     // Step 12. Singular and Gives Check Extensions
@@ -492,14 +507,14 @@ moves_loop: // When in check search starts from here.
     }
 
     if (moveCount == 1 && captureOrPromotion)
-    {
-     if (move == ttMove)
-     ttCapture = 1;
+   {
+    if (move == ttMove)
+    ttCapture = 1;
 
-     else
-     if (to_sq(move) == to_sq((ss - 1)->currentMove))
-     goodCap = 1;
-    }
+    else
+    if (to_sq(move) == to_sq((ss - 1)->currentMove))
+    goodCap = 1;
+   }
 
     // Update the current move (this must be done after singular extension
     // search)
@@ -682,7 +697,7 @@ moves_loop: // When in check search starts from here.
   // search then return a fail low score.
   if (!moveCount)
     bestValue = excludedMove ? alpha
-               :     inCheck ? mated_in(ss->ply) : DrawValue[pos_stm()];
+               :     inCheck ? mated_in(ss->ply) : VALUE_DRAW;
   else if (bestMove) {
     // Quiet best move: update move sorting heuristics.
     if (!is_capture_or_promotion(pos, bestMove))

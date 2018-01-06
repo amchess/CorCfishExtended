@@ -50,7 +50,7 @@ void print_engine_info(int to_uci)
 {
   char my_date[64];
 
-  printf("CorCfishExtended_1.8 %s", Version);
+  printf("CorCfishExtended_1.9 %s", Version);
 
   if (strlen(Version) == 0) {
     int day, month, year;
@@ -66,12 +66,12 @@ void print_engine_info(int to_uci)
     printf("%02d%02d%02d", day, month, year % 100);
   }
 
-  printf("%s%s%s%s\n", Is64Bit ? " 64" : ""
-                     , HasPext ? " BMI2" : ( USE_AVX ? " AVX" : (HasPopCnt ? " POPCNT" : ""))
-                     , HasNuma ? " NUMA" : ""
+  printf("%s%s%s%s\n", Is64Bit ? " x64" : " x32"
+                     , HasPext ? " BMI2" : ( USE_AVX2 ? " AVX2" :( USE_AVX ? " AVX" : (HasPopCnt ? " POPCNT" : "")))
+                     , HasNuma ? " N" : ""
                      , to_uci ? "\nid author T. Romstad, M. Costalba, "
                                 "J. Kiiski, G. Linscott"
-                              : " by Amchess based on ChessMan3 (CFish), IIvec (corchess)");
+                              : " by ChessMan3 based on CFish and CorChess");
   fflush(stdout);
 }
 

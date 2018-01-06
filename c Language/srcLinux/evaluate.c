@@ -45,7 +45,8 @@ struct EvalInfo {
   Bitboard mobilityArea[2];
 
   // attackedBy[color][piece type] is a bitboard representing all squares
-  // attacked by a given color and piece type (can be also ALL_PIECES).
+  // attacked by a given color and piece type. Special "piece types" which
+  // are also calculated are QUEEN_DIAGONAL and ALL_PIECES.
   Bitboard attackedBy[2][8];
 
   // attackedBy2[color] are the squares attacked by 2 pieces of a given
@@ -154,10 +155,8 @@ static const Score LongRangedBishop      = S( 22,  0);
 static const Score RookOnPawn            = S(  8, 24);
 static const Score TrappedRook           = S( 92,  0);
 static const Score WeakQueen             = S( 50, 10);
-static const Score OtherCheck            = S( 10, 10);
 static const Score CloseEnemies          = S(  7,  0);
 static const Score PawnlessFlank         = S( 20, 80);
-static const Score ThreatByHangingPawn   = S( 71, 61);
 static const Score ThreatBySafePawn      = S(192,175);
 static const Score ThreatByRank          = S( 16,  3);
 static const Score Hanging               = S( 48, 27);
@@ -174,13 +173,15 @@ static const Score TrappedBishopA1H1     = S( 50, 50);
 static const int KingAttackWeights[8] = { 0, 0, 78, 56, 45, 11 };
 
 // Penalties for enemy's safe checks
-#define QueenCheck        780
-#define RookCheck         880
-#define BishopCheck       435
-#define KnightCheck       790
+#define QueenSafeCheck    780
+#define RookSafeCheck     880
+#define BishopSafeCheck   435
+#define KnightSafeCheck   790
 
 // Threshold for space evaluation
 #define SpaceThreshold 12222
+
+Score Contempt = SCORE_ZERO;
 
 
 // eval_init() initializes king and attack bitboards for a given color
@@ -188,9 +189,9 @@ static const int KingAttackWeights[8] = { 0, 0, 78, 56, 45, 11 };
 
 INLINE void evalinfo_init(const Pos *pos, EvalInfo *ei, const int Us)
 {
-  const int Them = (Us == WHITE ? BLACK   : WHITE);
-  const int Up   = (Us == WHITE ? DELTA_N : DELTA_S);
-  const int Down = (Us == WHITE ? DELTA_S : DELTA_N);
+  const int Them = (Us == WHITE ? BLACK : WHITE);
+  const int Up   = (Us == WHITE ? NORTH : SOUTH);
+  const int Down = (Us == WHITE ? SOUTH : NORTH);
   const Bitboard LowRanks = (Us == WHITE ? Rank2BB | Rank3BB
                                          : Rank7BB | Rank6BB);
 
@@ -241,8 +242,9 @@ INLINE Score evaluate_piece(const Pos *pos, EvalInfo *ei, Score *mobility,
 
   loop_through_pieces(Us, Pt, s) {
     // Find attacked squares, including x-ray attacks for bishops and rooks
-    b = Pt == BISHOP ? attacks_bb_bishop(s, pieces() ^ pieces_cp(Us, QUEEN))
-      : Pt == ROOK ? attacks_bb_rook(s, pieces() ^ pieces_cpp(Us, ROOK, QUEEN))
+    b = Pt == BISHOP ? attacks_bb_bishop(s, pieces() ^ pieces_p(QUEEN))
+      : Pt == ROOK ? attacks_bb_rook(s,
+                              pieces() ^ pieces_p(QUEEN) ^ pieces_cp(Us, ROOK))
                    : attacks_from(Pt, s);
 
     if (pinned_pieces(pos, Us) & sq_bb(s))
@@ -300,7 +302,7 @@ INLINE Score evaluate_piece(const Pos *pos, EvalInfo *ei, Score *mobility,
       if (   Pt == BISHOP
           && is_chess960()
           && (s == relative_square(Us, SQ_A1) || s == relative_square(Us, SQ_H1))) {
-        Square d = pawn_push(Us) + (file_of(s) == FILE_A ? DELTA_E : DELTA_W);
+        Square d = pawn_push(Us) + (file_of(s) == FILE_A ? EAST : WEST);
         if (piece_on(s + d) == make_piece(Us, PAWN))
           score -=  piece_on(s + d + pawn_push(Us))             ? TrappedBishopA1H1 * 4
                   : piece_on(s + d + d) == make_piece(Us, PAWN) ? TrappedBishopA1H1 * 2
@@ -360,13 +362,12 @@ INLINE Score evaluate_pieces(const Pos *pos, EvalInfo *ei, Score *mobility)
 INLINE Score evaluate_king(const Pos *pos, EvalInfo *ei, int Us)
 {
   const int Them = (Us == WHITE ? BLACK   : WHITE);
-  const int Up = (Us == WHITE ? DELTA_N : DELTA_S);
   const Bitboard Camp = (   Us == WHITE
                          ? AllSquares ^ Rank6BB ^ Rank7BB ^ Rank8BB
                          : AllSquares ^ Rank1BB ^ Rank2BB ^ Rank3BB);
 
   const Square ksq = square_of(Us, KING);
-  Bitboard weak, b, b1, b2, safe, other;
+  Bitboard weak, b, b1, b2, safe, unsafeChecks;
   int kingDanger;
 
   // King shelter and enemy pawns storm
@@ -375,35 +376,24 @@ INLINE Score evaluate_king(const Pos *pos, EvalInfo *ei, int Us)
 
   // Main king safety evaluation
   if (ei->kingAttackersCount[Them] > (1 - piece_count(Them, QUEEN))) {
-    // Attacked squares defended at msot once by our queen or king
+    // Attacked squares defended at most once by our queen or king
     weak =  ei->attackedBy[Them][0]
           & ~ei->attackedBy2[Us]
           & (   ei->attackedBy[Us][KING] | ei->attackedBy[Us][QUEEN]
              | ~ei->attackedBy[Us][0]);
 
-    // Initialize the 'kingDanger' variable, which will be transformed
-    // later into a king danger score. The initial value is based on the
-    // number and types of the enemy's attacking pieces, the number of
-    // attacked and weak squares around our king, the absence of queen and
-    // and the quality of the pawn shelter (current 'score' value).
-    kingDanger =  ei->kingAttackersCount[Them] * ei->kingAttackersWeight[Them]
-                + 102 * ei->kingAdjacentZoneAttacksCount[Them]
-                + 191 * popcount(ei->kingRing[Us] & weak)
-                + 143 * !!pinned_pieces(pos, Us)
-                - 848 * !pieces_cp(Them, QUEEN)
-                -   9 * mg_value(score) / 8
-                + 40;
+    kingDanger = unsafeChecks = 0;
 
     // Analyse the safe enemy's checks which are possible on next move
     safe  = ~pieces_c(Them);
     safe &= ~ei->attackedBy[Us][0] | (weak & ei->attackedBy2[Them]);
 
-    b1 = attacks_from_rook(ksq);
-    b2 = attacks_from_bishop(ksq);
+    b1 = attacks_bb_rook(ksq, pieces() ^ pieces_cp(Us, QUEEN));
+    b2 = attacks_bb_bishop(ksq, pieces() ^ pieces_cp(Us, QUEEN));
 
     // Enemy queen safe checks
     if ((b1 | b2) & ei->attackedBy[Them][QUEEN] & safe & ~ei->attackedBy[Us][QUEEN])
-      kingDanger += QueenCheck;
+      kingDanger += QueenSafeCheck;
 
     // For minors and rooks, also consider the square safe if attacked twice
     // and only defended by our queen.
@@ -411,39 +401,45 @@ INLINE Score evaluate_king(const Pos *pos, EvalInfo *ei, int Us)
            & ~(ei->attackedBy2[Us] | pieces_c(Them))
            & ei->attackedBy[Us][QUEEN];
 
-    // Some other potential checks are also analysed, even from squares
-    // currently occupied by the opponent's own pieces, as long as the
-    // square is not attacked by our own pawns and is not occupied by
-    // a blocked pawn.
-    other = ~(   ei->attackedBy[Us][PAWN]
-              | (pieces_cp(Them, PAWN) & shift_bb(Up, pieces_p(PAWN))));
+    b1 &= ei->attackedBy[Them][ROOK];
+    b2 &= ei->attackedBy[Them][BISHOP];
 
-    // Enemy rooks safe and other checks
-    if (b1 & ei->attackedBy[Them][ROOK] & safe)
-      kingDanger += RookCheck;
+    // Enemy rooks checks
+    if (b1 & safe)
+      kingDanger += RookSafeCheck;
+    else
+      unsafeChecks |= b1;
 
-    else if (b1 & ei->attackedBy[Them][ROOK] & other)
-      score -= OtherCheck;
+    // Enemy bishops checks
+    if (b2 & safe)
+      kingDanger += BishopSafeCheck;
+    else
+      unsafeChecks |= b2;
 
-    // Enemy bishops safe and other checks
-    if (b2 & ei->attackedBy[Them][BISHOP] & safe)
-      kingDanger += BishopCheck;
-
-    else if (b2 & ei->attackedBy[Them][BISHOP] & other)
-      score -= OtherCheck;
-
-    // Enemy knights safe and other checks
+    // Enemy knights checks
     b = attacks_from_knight(ksq) & ei->attackedBy[Them][KNIGHT];
     if (b & safe)
-      kingDanger += KnightCheck;
 
-    else if (b & other)
-      score -= OtherCheck;
-  
+      kingDanger += KnightSafeCheck;
+    else
+      unsafeChecks |= b;
+
+    // Unsafe or occupied checking squares will also be considered, as long
+    // the square is in the attacker's mobility area.
+    unsafeChecks &= ei->mobilityArea[Them];
+
+    kingDanger +=  ei->kingAttackersCount[Them] * ei->kingAttackersWeight[Them]
+                 + 102 * ei->kingAdjacentZoneAttacksCount[Them]
+                 + 191 * popcount(ei->kingRing[Us] & weak)
+                 + 143 * popcount(pinned_pieces(pos, Us) | unsafeChecks)
+                 - 848 * !pieces_cp(Them, QUEEN)
+                 -   9 * mg_value(score) / 8
+                 + 40;
+
     int KingSafe = option_value(OPT_KingSafe) / 100;
     if (option_value(OPT_Tactical))
-    KingSafe = 5; 
-
+    KingSafe = 5;
+    
     // Transform the kingDanger units into a Score, and subtract it from
     // the evaluation.
     if (kingDanger > 0)
@@ -477,10 +473,10 @@ INLINE Score evaluate_king(const Pos *pos, EvalInfo *ei, int Us)
 
 INLINE Score evaluate_threats(const Pos *pos, EvalInfo *ei, const int Us)
 {
-  const int Them  = (Us == WHITE ? BLACK    : WHITE);
-  const int Up    = (Us == WHITE ? DELTA_N  : DELTA_S);
-  const int Left  = (Us == WHITE ? DELTA_NW : DELTA_SE);
-  const int Right = (Us == WHITE ? DELTA_NE : DELTA_SW);
+  const int Them  = (Us == WHITE ? BLACK      : WHITE);
+  const int Up    = (Us == WHITE ? NORTH      : SOUTH);
+  const int Left  = (Us == WHITE ? NORTH_WEST : SOUTH_EAST);
+  const int Right = (Us == WHITE ? NORTH_EAST : SOUTH_WEST);
   const Bitboard TRank3BB = (Us == WHITE ? Rank3BB  : Rank6BB);
 
   enum { Minor, Rook };
@@ -498,9 +494,6 @@ INLINE Score evaluate_threats(const Pos *pos, EvalInfo *ei, const int Us)
     safeThreats = (shift_bb(Right, b) | shift_bb(Left, b)) & weak;
 
     score += ThreatBySafePawn * popcount(safeThreats);
-
-    if (weak ^ safeThreats)
-      score += ThreatByHangingPawn;
   }
 
   // Squares strongly protected by the opponent, either because they attack the
@@ -578,8 +571,8 @@ INLINE Score evaluate_threats(const Pos *pos, EvalInfo *ei, const int Us)
 
 INLINE Score evaluate_passed_pawns(const Pos *pos, EvalInfo *ei, const int Us)
 {
-  const int Them = (Us == WHITE ? BLACK   : WHITE);
-  const int Up   = (Us == WHITE ? DELTA_N : DELTA_S);
+  const int Them = (Us == WHITE ? BLACK : WHITE);
+  const int Up   = (Us == WHITE ? NORTH : SOUTH);
 
   Bitboard b, bb, squaresToQueen, defendedSquares, unsafeSquares;
   Score score = SCORE_ZERO;
@@ -763,6 +756,7 @@ Value evaluate(const Pos *pos)
   assert(!pos_checkers());
 
   Score mobility[2] = { SCORE_ZERO, SCORE_ZERO };
+  //Value v;
   EvalInfo ei;
 
   // Probe the material hash table
@@ -771,18 +765,23 @@ Value evaluate(const Pos *pos)
   // If we have a specialized evaluation function for the current material
   // configuration, call it and return.
   if (material_specialized_eval_exists(ei.me))
-    return material_evaluate(ei.me, pos);
+      return material_evaluate(ei.me, pos);
+    //return material_evaluate(ei.me, pos) + Tempo;
 
   // Initialize score by reading the incrementally updated scores included
   // in the position struct (material + piece square tables) and the
   // material imbalance. Score is computed internally from the white point
   // of view.
-  Score score = pos_psq_score() + material_imbalance(ei.me);
+  Score score = pos_psq_score() + material_imbalance(ei.me) + Contempt;
 
   // Probe the pawn hash table
   ei.pe = pawn_probe(pos);
   score += ei.pe->score;
 
+  // Early exit if score is high
+  //v = (mg_value(score) + eg_value(score)) / 2;
+ // if (abs(v) > LazyThreshold)
+  //  return (pos_stm() == WHITE ? v : -v) + Tempo;
   Value v;
 
   // Initialize attack and king safety bitboards.

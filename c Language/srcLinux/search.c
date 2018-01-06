@@ -28,6 +28,7 @@
 #include "misc.h"
 #include "movegen.h"
 #include "movepick.h"
+#include "polybook.h"
 #include "search.h"
 #include "settings.h"
 #include "timeman.h"
@@ -94,7 +95,6 @@ struct Skill {
 //  Move best = 0;
 };
 
-static Value DrawValue[2];
 //static CounterMoveHistoryStat CounterMoveHistory;
 
 static Value search_PV(Pos *pos, Stack *ss, Value alpha, Value beta, Depth depth);
@@ -117,8 +117,6 @@ static void stable_sort(RootMove *rm, int num);
 static void uci_print_pv(Pos *pos, Depth depth, Value alpha, Value beta);
 static int extract_ponder_from_tt(RootMove *rm, Pos *pos);
 
-static TimePoint lastInfoTime;
-
 // search_init() is called during startup to initialize various lookup tables
 
 void search_init(void)
@@ -140,8 +138,6 @@ void search_init(void)
     FutilityMoveCounts[0][d] = (int)(2.4 + 0.74 * pow(d, 1.78));
     FutilityMoveCounts[1][d] = (int)(5.0 + 1.00 * pow(d, 2.00));
   }
-
-  lastInfoTime = now();
 }
 
 
@@ -231,16 +227,34 @@ void mainthread_search(void)
   time_init(us, pos_game_ply());
   tt_new_search();
   char buf[16];
+  int playBookMove = 0;
 
   int contempt = option_value(OPT_CONTEMPT) * PawnValueEg / 100; // From centipawns
-  DrawValue[us    ] = VALUE_DRAW - (Value)contempt;
-  DrawValue[us ^ 1] = VALUE_DRAW + (Value)contempt;
+
+  Contempt = us == WHITE ?  make_score(contempt, contempt / 2)
+                         : -make_score(contempt, contempt / 2);
 
   if (pos->rootMoves->size > 0) {
-    for (int idx = 1; idx < Threads.num_threads; idx++)
-      thread_start_searching(Threads.pos[idx], 0);
+    Move bookMove = 0;
 
-    thread_search(pos); // Let's start searching!
+    if (!Limits.infinite && !Limits.mate)
+      bookMove = pb_probe(pos);
+
+    for (int i = 0; i < pos->rootMoves->size; i++)
+      if (pos->rootMoves->move[i].pv[0] == bookMove) {
+        RootMove tmp = pos->rootMoves->move[0];
+        pos->rootMoves->move[0] = pos->rootMoves->move[i];
+        pos->rootMoves->move[i] = tmp;
+        playBookMove = 1;
+        break;
+      }
+
+    if (!playBookMove) {
+      for (int idx = 1; idx < Threads.num_threads; idx++)
+        thread_start_searching(Threads.pos[idx], 0);
+
+      thread_search(pos); // Let's start searching!
+    }
   }
 
   // When we reach the maximum depth, we can arrive here without a raise
@@ -261,10 +275,12 @@ void mainthread_search(void)
   Signals.stop = 1;
 
   // Wait until all threads have finished
-  if (pos->rootMoves->size > 0)
-    for (int idx = 1; idx < Threads.num_threads; idx++)
-      thread_wait_for_search_finished(Threads.pos[idx]);
-  else {
+  if (pos->rootMoves->size > 0) {
+    if (!playBookMove) {
+      for (int idx = 1; idx < Threads.num_threads; idx++)
+        thread_wait_for_search_finished(Threads.pos[idx]);
+    }
+  } else {
     pos->rootMoves->move[0].pv[0] = 0;
     pos->rootMoves->move[0].pv_size = 1;
     pos->rootMoves->size++;
@@ -421,7 +437,7 @@ if(option_value(OPT_CORRESPONDENCEMODE)) multiPV=256;
         delta2 = (prevScore > 0) ? (Value)((int)(8.0 + 0.1 * abs(prevScore))) : (Value)18;
         alpha = max(prevScore - delta1,-VALUE_INFINITE);
         beta  = min(prevScore + delta2, VALUE_INFINITE);
-	  }
+      }
 
       // Start with a small aspiration window and, in the case of a fail
       // high/low, re-search with a bigger window until we're not failing
@@ -524,7 +540,7 @@ skip_search:
         int improvingFactor = max(229, min(715, 357 + 119 * F[0] - 6 * F[1]));
 
         int us = pos_stm();
-        int thinkHard =   DrawValue[us] == bestValue
+        int thinkHard =   bestValue == VALUE_DRAW
                        && Limits.time[us] - time_elapsed() > Limits.time[us ^ 1]
                        && pv_is_draw(pos);
 
@@ -775,10 +791,6 @@ static int pv_is_draw(Pos *pos)
 static void check_time(void)
 {
   int elapsed = time_elapsed();
-  TimePoint tick = Limits.startTime + elapsed;
-
-  if (tick - lastInfoTime >= 1000)
-    lastInfoTime = tick;
 
   // An engine may not stop pondering until told so by the GUI
   if (Limits.ponder)
@@ -967,6 +979,8 @@ void start_thinking(Pos *root)
   for (int idx = 0; idx < Threads.num_threads; idx++) {
     Pos *pos = Threads.pos[idx];
     pos->selDepth = 0;
+    pos->nmp_ply = 0;
+    pos->pair = -1;
     pos->rootDepth = DEPTH_ZERO;
     pos->nodes = pos->tb_hits = 0;
     RootMoves *rm = pos->rootMoves;

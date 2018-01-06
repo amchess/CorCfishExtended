@@ -187,7 +187,7 @@ static int *node_number;
 static GROUP_AFFINITY *node_group_mask;
 static ULONGLONG *node_mask = NULL;
 static int *num_physical_cores;
-//static int *num_logical_cores;
+static int *num_logical_cores;
 
 void numa_init(void)
 {
@@ -252,7 +252,7 @@ void numa_init(void)
 
     // Then count cores in each node.
     num_physical_cores = calloc(num_nodes, sizeof(int));
-//    num_logical_cores = calloc(num_nodes, sizeof(int));
+    num_logical_cores = calloc(num_nodes, sizeof(int));
     ptr = buffer;
     offset = 0;
     while (ptr->Size > 0 && offset + ptr->Size <= len) {
@@ -341,7 +341,7 @@ void numa_exit(void)
   else
     free(node_mask);
   free(num_physical_cores);
-//  free(num_logical_cores);
+  free(num_logical_cores);
 }
 
 void read_numa_nodes(char *str)
