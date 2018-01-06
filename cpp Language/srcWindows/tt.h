@@ -103,21 +103,21 @@ public:
   uint8_t generation() const { return generation8; }
   TTEntry* probe(const Key key, bool& found) const;
   int hashfull() const;
-  void resize(size_t mbSize);
+  void resize(int64_t mbSize);
   void clear();
   void set_hash_file_name(const std::string& fname);
   bool save();
   void load();
   void load_epd_to_hash();
-  std::string hashfilename = "SugaR_hash.hsh";
+  std::string hashfilename = "hash.hsh";
 
-  // The 32 lowest order bits of the key are used to get the index of the cluster
+  // The lowest order bits of the key are used to get the index of the cluster
   TTEntry* first_entry(const Key key) const {
-    return &table[(uint32_t(key) * uint64_t(clusterCount)) >> 32].entry[0];
+    return &table[(size_t)key & (clusterCount - 1)].entry[0];
   }
 
 private:
-  size_t  mbSize_last_used;
+  int64_t  mbSize_last_used;
 
 #ifdef _WIN32
   bool large_pages_used;

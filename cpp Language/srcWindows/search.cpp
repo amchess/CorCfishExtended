@@ -1,5 +1,5 @@
 /*
-	StockfValue DrawValue[COLOR_NB];ish, a UCI chess playing engine derived from Glaurung 2.1
+	Stockfish, a UCI chess playing engine derived from Glaurung 2.1
   Copyright (C) 2004-2008 Tord Romstad (Glaurung author)
   Copyright (C) 2008-2015 Marco Costalba, Joona Kiiski, Tord Romstad
   Copyright (C) 2015-2017 Marco Costalba, Joona Kiiski, Gary Linscott, Tord Romstad
@@ -84,7 +84,7 @@ namespace {
   template <bool PvNode> Depth reduction(bool i, Depth d, int mn) {
     return Reductions[PvNode][i][std::min(d / ONE_PLY, 127)][std::min(mn, 63)] * ONE_PLY;
   }
-void Search::clear() {
+
   // History and stats update bonus, based on depth
   int stat_bonus(Depth depth) {
     int d = depth / ONE_PLY;
@@ -104,7 +104,7 @@ void Search::clear() {
   };
 
   bool cleanSearch;
-  
+  Value DrawValue[COLOR_NB];
   int variety;
   bool correspondenceMode = Options["Analysis Mode"];
   bool safetyEvaluator=Options["Safety Evaluator"];
@@ -166,7 +166,13 @@ void Search::clear() {
 
   Time.availableNodes = 0;
   TT.clear();
-  Threads.clear();
+
+  for (Thread* th : Threads)
+      th->clear();
+
+  Threads.main()->callsCnt = 0;
+  Threads.main()->previousScore = VALUE_INFINITE;
+  Threads.main()->previousTimeReduction = 1;
 }
 
 
@@ -204,13 +210,6 @@ template uint64_t Search::perft<true>(Position&, Depth);
 
 void MainThread::search() {
 
-  if (Limits.perft)
-  {
-      nodes = perft<true>(rootPos, Limits.perft * ONE_PLY);
-      sync_cout << "\nNodes searched: " << nodes << "\n" << sync_endl;
-      return;
-  }
-
   static PolyglotBook book; // Defined static to initialize the PRNG only once
   Color us = rootPos.side_to_move();
   Time.init(Limits, us, rootPos.game_ply());
@@ -220,10 +219,15 @@ void MainThread::search() {
   else
 	TT.infinite_search();
 
-  int contempt = Options["Dynamic contempt"] * PawnValueEg / 100; // From centipawns
+  int base_contempt = Options["Dynamic contempt"] * PawnValueEg / 100; // From centipawns
+  // gradially reduce contempt when previousScore is between -4 and -3 base_contempt.
+  base_contempt = std::min(base_contempt, std::max(0, (int(previousScore) + 4 * base_contempt )));
+  
+  Contempt[ us] =  make_score(base_contempt, 0);
+  Contempt[~us] = -Contempt[us];
 
-  Eval::Contempt = (us == WHITE ?  make_score(contempt, contempt / 2)
-                                : -make_score(contempt, contempt / 2));
+  DrawValue[ us] = VALUE_DRAW - score_to_value(Contempt[us], rootPos);
+  DrawValue[~us] = VALUE_DRAW + score_to_value(Contempt[us], rootPos);
 
   // Read search options
   bruteForce = Options["BruteForce"];
@@ -530,7 +534,7 @@ void Thread::search() {
 
               int improvingFactor = std::max(229, std::min(715, 357 + 119 * F[0] - 6 * F[1]));
               Color us = rootPos.side_to_move();
-			  bool thinkHard =    bestValue == VALUE_DRAW
+              bool thinkHard =    DrawValue[us] == bestValue
                                && Limits.time[us] - Time.elapsed() > Limits.time[~us]
                                && ::pv_is_draw(rootPos);
 
@@ -618,7 +622,8 @@ namespace {
     {
         // Step 2. Check for aborted search and immediate draw
         if (Threads.stop.load(std::memory_order_relaxed) || pos.is_draw(ss->ply) || ss->ply >= MAX_PLY)
-            return ss->ply >= MAX_PLY && !inCheck ? evaluate(pos) : VALUE_DRAW;
+            return ss->ply >= MAX_PLY && !inCheck ? evaluate(pos)
+                                                  : DrawValue[pos.side_to_move()];
 
         // Step 3. Mate distance pruning. Even if we mate at the next move our score
         // would be at best mate_in(ss->ply+1), but if alpha is already bigger because
@@ -644,7 +649,7 @@ namespace {
     // search to overwrite a previous full search TT value, so we use a different
     // position key in case of an excluded move.
     excludedMove = ss->excludedMove;
-    posKey = pos.key() ^ Key(excludedMove << 16); // isn't a very good hash
+    posKey = pos.key() ^ Key(excludedMove);
     tte = TT.probe(posKey, ttHit);
     ttValue = ttHit ? value_from_tt(tte->value(), ss->ply) : VALUE_NONE;
     ttMove =  rootNode ? thisThread->rootMoves[thisThread->PVIdx].pv[0]
@@ -780,8 +785,7 @@ namespace {
         && (ss->staticEval >= beta - int(320 * log(depth / ONE_PLY)) + 500)
         &&  thisThread->selDepth + 5 > thisThread->rootDepth / ONE_PLY
         && !(depth > 12 * ONE_PLY && MoveList<LEGAL>(pos).size() < 4)
-        &&  pos.non_pawn_material(pos.side_to_move()) > (depth > 12 * ONE_PLY) * BishopValueMg
-        && (ss->ply >= thisThread->nmp_ply || ss->ply % 2 == thisThread->pair))
+        &&  pos.non_pawn_material(pos.side_to_move()) > (depth > 12 * ONE_PLY) * BishopValueMg)
     {
 
         assert(eval - beta >= 0);
@@ -803,23 +807,13 @@ namespace {
             if (nullValue >= VALUE_MATE_IN_MAX_PLY)
                 nullValue = beta;
 
-            if (depth < 12 * ONE_PLY && abs(beta) < VALUE_KNOWN_WIN)
+            if (abs(beta) < VALUE_KNOWN_WIN)
                 return nullValue;
 
-            // Do verification search at high depths
-            R += ONE_PLY;
-            // disable null move pruning for side to move for the first part of the remaining search tree
-            int nmp_ply = thisThread->nmp_ply;
-            int pair = thisThread->pair;
-            thisThread->nmp_ply = ss->ply + 3 * (depth-R) / 4;
-            thisThread->pair = (ss->ply % 2) == 0;
-			
+            // Do verification search when searching for mate
             Value v = depth-R < ONE_PLY ? qsearch<NonPV, false>(pos, ss, beta-1, beta)
                                         :  search<NonPV>(pos, ss, beta-1, beta, depth-R, false, true);
 
-            thisThread->pair = pair;
-            thisThread->nmp_ply = nmp_ply;
-			
             if (v >= beta)
                 return nullValue;
         }
@@ -1216,7 +1210,7 @@ moves_loop: // When in check search starts from here
 
     if (!moveCount)
         bestValue = excludedMove ? alpha
-                   :     inCheck ? mated_in(ss->ply) : VALUE_DRAW;
+                   :     inCheck ? mated_in(ss->ply) : DrawValue[pos.side_to_move()];
     else if (bestMove)
     {
         // Quiet best move: update move sorting heuristics
@@ -1285,7 +1279,8 @@ moves_loop: // When in check search starts from here
 
     // Check for an instant draw or if the maximum ply has been reached
     if (pos.is_draw(ss->ply) || ss->ply >= MAX_PLY)
-        return ss->ply >= MAX_PLY && !InCheck ? evaluate(pos) : VALUE_DRAW;
+        return ss->ply >= MAX_PLY && !InCheck ? evaluate(pos)
+                                              : DrawValue[pos.side_to_move()];
 
     assert(0 <= ss->ply && ss->ply < MAX_PLY);
 
@@ -1636,7 +1631,7 @@ moves_loop: // When in check search starts from here
     if (Threads.ponder)
         return;
 
-    if (   (Limits.use_time_management() && elapsed > Time.maximum() - 10)
+    if (   (Limits.use_time_management() && elapsed > Time.maximum())
         || (Limits.movetime && elapsed >= Limits.movetime)
         || (Limits.nodes && Threads.nodes_searched() >= (uint64_t)Limits.nodes))
             Threads.stop = true;

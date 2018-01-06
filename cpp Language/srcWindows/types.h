@@ -91,10 +91,22 @@ const bool HasPext = true;
 const bool HasPext = false;
 #endif
 
+#ifdef USE_AVX
+const bool UseAVX = true;
+#else
+const bool UseAVX = false;
+#endif
+
 #ifdef IS_64BIT
 const bool Is64Bit = true;
 #else
 const bool Is64Bit = false;
+#endif
+
+#ifdef USE_AVX2
+const bool UseAVX2 = true;
+#else
+const bool UseAVX2 = false;
 #endif
 
 typedef uint64_t Key;
@@ -270,11 +282,13 @@ constexpr Score make_score(int mg, int eg) {
 /// according to the standard a simple cast to short is implementation defined
 /// and so is a right shift of a signed integer.
 inline Value eg_value(Score s) {
+
   union { uint16_t u; int16_t s; } eg = { uint16_t(unsigned(s + 0x8000) >> 16) };
   return Value(eg.s);
 }
 
 inline Value mg_value(Score s) {
+
   union { uint16_t u; int16_t s; } mg = { uint16_t(unsigned(s)) };
   return Value(mg.s);
 }
@@ -446,3 +460,4 @@ constexpr bool is_ok(Move m) {
 }
 
 #endif // #ifndef TYPES_H_INCLUDED
+

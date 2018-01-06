@@ -126,7 +126,7 @@ const std::string engine_info(bool to_uci) {
   std::string month, day, year;
   std::stringstream date(__DATE__); // From compiler, format is "Sep 21 2008"
 
-  ss << "CorChess 1.9 " << Version << setfill('0');
+  ss << "CorChessExtended " << Version << setfill('0');
 
 
   if (Version.empty())
@@ -137,7 +137,7 @@ const std::string engine_info(bool to_uci) {
 
 
   ss << (Is64Bit ? " x64" : " x32")
-     << (HasPext ? " BMI2" : (HasPopCnt ? " POPCNT" : ""))
+     << (HasPext ? " BMI2" : ( UseAVX ? " AVX" : (HasPopCnt ? " POPCNT" : "")))
      << (to_uci  ? "\nid author ": " by ")
      << "Amchess from I. Ivec";
 	 return ss.str();
