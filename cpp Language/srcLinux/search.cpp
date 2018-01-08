@@ -2,7 +2,7 @@
 	Stockfish, a UCI chess playing engine derived from Glaurung 2.1
   Copyright (C) 2004-2008 Tord Romstad (Glaurung author)
   Copyright (C) 2008-2015 Marco Costalba, Joona Kiiski, Tord Romstad
-  Copyright (C) 2015-2017 Marco Costalba, Joona Kiiski, Gary Linscott, Tord Romstad
+  Copyright (C) 2015-2018 Marco Costalba, Joona Kiiski, Gary Linscott, Tord Romstad
 
   Stockfish is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -91,7 +91,7 @@ namespace {
 
   // Skill structure is used to implement strength limit
   struct Skill {
-    Skill(int l) : level(l) {}
+    explicit Skill(int l) : level(l) {}
     bool enabled() const { return level < 20; }
     bool time_to_pick(Depth depth) const { return depth / ONE_PLY == 1 + level; }
     Move best_move(size_t multiPV) { return best ? best : pick_best(multiPV); }
@@ -152,7 +152,9 @@ namespace {
 
 /// Search::init() is called during startup to initialize various lookup tables
 
-void Search::init() {
+void Search::init(bool OptioncleanSearch) {
+
+  cleanSearch = OptioncleanSearch;
 
   for (int imp = 0; imp <= 1; ++imp)
       for (int d = 1; d < 128; ++d)
@@ -196,17 +198,21 @@ void Search::clear() {
 
 void MainThread::search() {
 
-  static PolyglotBook book; // Defined static to initialize the PRNG only once
   if (Limits.perft)
   {
       nodes = perft<true>(rootPos, Limits.perft * ONE_PLY);
       sync_cout << "\nNodes searched: " << nodes << "\n" << sync_endl;
       return;
-  }  
+  }
+
+  static PolyglotBook book; // Defined static to initialize the PRNG only once
+
   Color us = rootPos.side_to_move();
   Time.init(Limits, us, rootPos.game_ply());
-  variety = Options["Variety"];
-  TT.new_search();
+    if (!Limits.infinite)
+	TT.new_search();
+  else
+	TT.infinite_search();
 
   int contempt = Options["Contempt"] * PawnValueEg / 100; // From centipawns
 
@@ -215,6 +221,7 @@ void MainThread::search() {
 
 
   // Read search options
+  variety = Options["Variety"];
   bruteForce = Options["BruteForce"];
   limitStrength = Options["UCI_LimitStrength"];
   doRazor = Options["Razoring"];
@@ -358,6 +365,8 @@ void Thread::search() {
   for (int i = 4; i > 0; i--)
      (ss-i)->contHistory = &this->contHistory[NO_PIECE][0]; // Use as sentinel
 
+  if (cleanSearch) 
+	  Search::clear();
 
   bestValue = delta1 = delta2 = alpha = -VALUE_INFINITE;
   beta = VALUE_INFINITE;
@@ -624,7 +633,7 @@ namespace {
     (ss+1)->ply = ss->ply + 1;
     ss->currentMove = (ss+1)->excludedMove = bestMove = MOVE_NONE;
     ss->contHistory = &thisThread->contHistory[NO_PIECE][0];
-    (ss+2)->killers[0] = (ss+2)->killers[1] = (ss+2)->killers[2] = (ss+2)->killers[3] = MOVE_NONE;
+    (ss+2)->killers[0] = (ss+2)->killers[1] = MOVE_NONE;
     Square prevSq = to_sq((ss-1)->currentMove);
 
     // Step 4. Transposition table lookup. We don't want the score of a partial
@@ -862,9 +871,6 @@ moves_loop: // When in check search starts from here
             /* || ss->staticEval == VALUE_NONE Already implicit in the previous condition */
                ||(ss-2)->staticEval == VALUE_NONE;
 
-	bool greatlyImproving = (ss - 0)->staticEval > (ss - 2)->staticEval + 16
-		 && (ss - 2)->staticEval > (ss - 4)->staticEval + 16;
-
     singularExtensionNode =   !rootNode
                            &&  depth >= 8 * ONE_PLY
                            &&  ttMove != MOVE_NONE
@@ -1060,7 +1066,7 @@ moves_loop: // When in check search starts from here
               // Decrease/increase reduction by comparing opponent's stat score
               if (ss->statScore >= 0 && (ss-1)->statScore < 0)
                   r -= ONE_PLY;
-				  
+
               else if ((ss-1)->statScore >= 0 && ss->statScore < 0)
                   r += ONE_PLY;
 
@@ -1083,11 +1089,7 @@ moves_loop: // When in check search starts from here
 
           Depth d = std::max(newDepth - r, ONE_PLY);
 
-		  bool foo = PvNode && !moveCountPruning && greatlyImproving && ss->staticEval > alpha;
-		  // && "iteration depth" >= 10 * ONE_PLY;
-		  // or && "iteration depth" >= 4 * ONE_PLY
-
-          value = -search<NonPV>(pos, ss+1, -(alpha+1), -alpha, d, true, foo);
+          value = -search<NonPV>(pos, ss+1, -(alpha+1), -alpha, d, true, false);
 
           doFullDepthSearch = (value > alpha && d != newDepth);
       }
@@ -1181,7 +1183,7 @@ moves_loop: // When in check search starts from here
       if (!captureOrPromotion && move != bestMove && quietCount < 64)
           quietsSearched[quietCount++] = move;
       else if (captureOrPromotion && move != bestMove && captureCount < 32)
-          capturesSearched[captureCount++] = move;		  
+          capturesSearched[captureCount++] = move;
     }
 
     // The following condition would detect a stop only after move loop has been
@@ -1209,7 +1211,6 @@ moves_loop: // When in check search starts from here
             update_stats(pos, ss, bestMove, quietsSearched, quietCount, stat_bonus(depth));
         else
             update_capture_stats(pos, bestMove, capturesSearched, captureCount, stat_bonus(depth));
-
 
         // Extra penalty for a quiet TT move in previous ply when it gets refuted
         if ((ss-1)->moveCount == 1 && !pos.captured_piece())
@@ -1273,7 +1274,6 @@ moves_loop: // When in check search starts from here
         return ss->ply >= MAX_PLY && !InCheck ? evaluate(pos) : VALUE_DRAW;
 
     assert(0 <= ss->ply && ss->ply < MAX_PLY);
-
 
     // Decide whether or not to include checks: this fixes also the type of
     // TT entry depth that we are going to use. Note that in qsearch we use
@@ -1355,9 +1355,8 @@ moves_loop: // When in check search starts from here
       if (   !InCheck
           && !givesCheck
           &&  futilityBase > -VALUE_KNOWN_WIN
-          && !pos.advanced_pawn_push(move))
+		  && type_of(move) == NORMAL)
       {
-          assert(type_of(move) != ENPASSANT); // Due to !pos.advanced_pawn_push
 
           futilityValue = futilityBase + PieceValue[EG][pos.piece_on(to_sq(move))];
 
@@ -1494,6 +1493,8 @@ moves_loop: // When in check search starts from here
         if (is_ok((ss-i)->currentMove))
             (ss-i)->contHistory->update(pc, to, bonus);
   }
+
+
   // update_capture_stats() updates move sorting heuristics when a new capture best move is found
 
   void update_capture_stats(const Position& pos, Move move,
@@ -1512,6 +1513,7 @@ moves_loop: // When in check search starts from here
           captureHistory.update(moved_piece, to_sq(captures[i]), captured, -bonus);
       }
   }
+
 
   // update_stats() updates move sorting heuristics when a new quiet best move is found
 
@@ -1543,6 +1545,7 @@ moves_loop: // When in check search starts from here
     }
   }
 
+
   // Is the PV leading to a draw position? Assumes all pv moves are legal
   bool pv_is_draw(Position& pos) {
 
@@ -1559,7 +1562,8 @@ moves_loop: // When in check search starts from here
 
     return isDraw;
   }
-  
+
+
   // When playing with strength handicap, choose best move among a set of RootMoves
   // using a statistical rule dependent on 'level'. Idea by Heinz van Saanen.
 
@@ -1583,7 +1587,7 @@ moves_loop: // When in check search starts from here
         int push = (  weakness * int(topScore - rootMoves[i].score)
                     + delta * (rng.rand<unsigned>() % weakness)) / 128;
 
-        if (rootMoves[i].score + push > maxScore)
+        if (rootMoves[i].score + push >= maxScore)
         {
             maxScore = rootMoves[i].score + push;
             best = rootMoves[i].pv[0];

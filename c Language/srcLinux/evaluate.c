@@ -794,26 +794,34 @@ Value evaluate(const Pos *pos)
 
   // Evaluate kings after all other pieces because we need full attack
   // information when computing the king safety evaluation.
-  score +=  evaluate_king(pos, &ei, WHITE)
-          - evaluate_king(pos, &ei, BLACK);
+  if(option_value(OPT_SAFETYEVAL)){
+	score =  evaluate_king(pos, &ei, WHITE)
+		  - evaluate_king(pos, &ei, BLACK);
 
+  }
   // Evaluate tactical threats, we need full attack information including king
   score +=  evaluate_threats(pos, &ei, WHITE)
           - evaluate_threats(pos, &ei, BLACK);
 
-  // Evaluate passed pawns, we need full attack information including king
-  score +=  evaluate_passed_pawns(pos, &ei, WHITE)
-          - evaluate_passed_pawns(pos, &ei, BLACK);
+  int eg;
+  if(!option_value(OPT_SAFETYEVAL)){
+	  // Evaluate passed pawns, we need full attack information including king
+	  score +=  evaluate_passed_pawns(pos, &ei, WHITE)
+			  - evaluate_passed_pawns(pos, &ei, BLACK);
 
-  // Evaluate space for both sides, only during opening
-  if (pos_non_pawn_material(WHITE) + pos_non_pawn_material(BLACK) >= SpaceThreshold)
-      score +=  evaluate_space(pos, &ei, WHITE)
-              - evaluate_space(pos, &ei, BLACK);
+	  // Evaluate space for both sides, only during opening
+	  if (pos_non_pawn_material(WHITE) + pos_non_pawn_material(BLACK) >= SpaceThreshold)
+		  score +=  evaluate_space(pos, &ei, WHITE)
+				  - evaluate_space(pos, &ei, BLACK);
 
-  // Evaluate position potential for the winning side
-  //  score += evaluate_initiative(pos, ei.pi->asymmetry, eg_value(score));
-  int eg = eg_value(score);
-  eg += evaluate_initiative(pos, ei.pe->asymmetry, eg);
+	  // Evaluate position potential for the winning side
+	  //  score += evaluate_initiative(pos, ei.pi->asymmetry, eg_value(score));
+	  eg = eg_value(score);
+	  eg += evaluate_initiative(pos, ei.pe->asymmetry, eg);
+  }
+  else{
+  	eg = eg_value(score);
+  }
 
   // Evaluate scale factor for the winning side
   //int sf = evaluate_scale_factor(pos, &ei, eg_value(score));

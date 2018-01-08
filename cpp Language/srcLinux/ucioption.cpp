@@ -2,7 +2,7 @@
   Stockfish, a UCI chess playing engine derived from Glaurung 2.1
   Copyright (C) 2004-2008 Tord Romstad (Glaurung author)
   Copyright (C) 2008-2015 Marco Costalba, Joona Kiiski, Tord Romstad
-  Copyright (C) 2015-2017 Marco Costalba, Joona Kiiski, Gary Linscott, Tord Romstad
+  Copyright (C) 2015-2018 Marco Costalba, Joona Kiiski, Gary Linscott, Tord Romstad
 
   Stockfish is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -42,7 +42,9 @@ UCI::OptionsMap Options; // Global object
 namespace UCI {
 
 /// 'On change' actions, triggered by an option's value change
+void on_clear_hash(const Option&) { Search::clear(); }
 void on_hash_size(const Option& o) { TT.resize(o); }
+void on_large_pages(const Option& o) { TT.resize(o); }  // warning is ok, will be removed
 void on_logger(const Option& o) { start_logger(o); }
 void on_threads(const Option& o) { Threads.set(o); }
 void on_tb_path(const Option& o) { Tablebases::init(o); }
@@ -51,7 +53,7 @@ void SaveHashtoFile(const Option&) { TT.save(); }
 void LoadHashfromFile(const Option&) { TT.load(); }
 void LoadEpdToHash(const Option&) { TT.load_epd_to_hash(); }
 
-void on_brainbook_path(const Option& o) { tzbook.init(o); }
+void on_brainbook_path(const Option& o) { tzbook.init(o, true); }
 void on_book_move2_prob(const Option& o) { tzbook.set_book_move2_probability(o); }
 
 /// Our case insensitive less() function as required by UCI protocol
@@ -66,6 +68,7 @@ bool CaseInsensitiveLess::operator() (const string& s1, const string& s2) const 
 
 void init(OptionsMap& o) {
 
+  // at most 2^32 clusters.
   const int MaxHashMB = Is64Bit ? 131072 : 2048;
 
   unsigned int n = std::thread::hardware_concurrency();
@@ -75,24 +78,25 @@ void init(OptionsMap& o) {
   o["Dynamic contempt"]               << Option(0, -100, 100);
   o["Threads"]                 << Option(n, 1, 512, on_threads);
   o["Hash"]                    << Option(128, 1, MaxHashMB, on_hash_size);
+  o["Clear Hash"]               << Option(on_clear_hash);
   o["Ponder"]                  << Option(false);
   o["MultiPV"]                 << Option(1, 1, 500);
   o["Skill Level"]             << Option(20, 0, 20);
+  o["Large Pages"]              << Option(true, on_large_pages);
   //Tactical play
   o["Tactical play"]          << Option();
   o["King safe"]             << Option(100, 100, 1500);
   o["Tactical"]              << Option(false);
     //Time manager
   o["Time manager"]          << Option();
-  o["Move Overhead"]           << Option(30, 0, 5000);
-  o["Minimum Thinking Time"]    << Option(20, 0, 5000);
+  o["Move Overhead"]           << Option(100, 0, 5000);
   o["Slow Mover"]               << Option(89, 10, 1000);
   o["nodestime"]               << Option(0, 0, 10000);
   o["FastPlay"]                << Option(false);
   //Hash file management
   o["Hash file management"]          << Option();
   o["NeverClearHash"]		   << Option(false);
-  o["HashFile"]		           << Option("hash.hsh", on_HashFile);
+  o["HashFile"]		           << Option("CorchessExtended_hash.hsh", on_HashFile);
   o["SaveHashtoFile"]		   << Option(SaveHashtoFile);
   o["LoadHashfromFile"]		   << Option(LoadHashfromFile);
   o["LoadEpdToHash"]            << Option(LoadEpdToHash);

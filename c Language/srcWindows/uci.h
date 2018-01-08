@@ -68,6 +68,7 @@ typedef void (*OnChange)(Option *);
 #define OPT_KingSafe        28
 #define OPT_Tactical        29
 #define OPT_NUMA            30
+#define OPT_SAFETYEVAL      31
 
 struct Option {
   char *name;
