@@ -29,7 +29,7 @@ class TZBook
    TZBook();
    ~TZBook();
 
-    void init(const std::string& path);
+    void init(const std::string& path, bool to_uci=false);
     void set_book_move2_probability(int book_move2_prob);
 
     Move probe2(Position& pos);

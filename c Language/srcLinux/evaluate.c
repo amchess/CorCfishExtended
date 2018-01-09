@@ -799,6 +799,11 @@ Value evaluate(const Pos *pos)
 		  - evaluate_king(pos, &ei, BLACK);
 
   }
+  else{
+	score +=  evaluate_king(pos, &ei, WHITE)
+		  - evaluate_king(pos, &ei, BLACK);
+
+  }
   // Evaluate tactical threats, we need full attack information including king
   score +=  evaluate_threats(pos, &ei, WHITE)
           - evaluate_threats(pos, &ei, BLACK);
