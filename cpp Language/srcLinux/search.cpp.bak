@@ -231,7 +231,7 @@ void MainThread::search() {
   doPruning = Options["Pruning"];
   doLMR = Options["LMR"];
   maxLMR = Options["MaxLMReduction"] * ONE_PLY;
-  correspondenceMode = Options["Analysis Mode"];
+  correspondenceMode = Options["Analysis Mode"]
   if (rootMoves.empty())
   {
       rootMoves.emplace_back(MOVE_NONE);
@@ -1081,9 +1081,9 @@ moves_loop: // When in check search starts from here
           // weaker overall.  It also sets the "MultiPV" option to 256 to allow Engine to look at more nodes per
           // depth and may help in analysis.
 		  if(safetyEvaluator){
-			correspondenceMode=8;
+			correspondenceMode=true;
 		  }
-		  if ( ( ss->ply < depth / 2 - ONE_PLY) && (correspondenceMode=8) )
+		  if ( ( ss->ply < depth / 2 - ONE_PLY) && correspondenceMode )
 		    r = DEPTH_ZERO;
 		
 

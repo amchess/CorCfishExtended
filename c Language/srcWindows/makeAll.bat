@@ -1,6 +1,6 @@
 @echo off
-ren C:\MinGW\mingw64-540 mingw64
-ren C:\MinGW\mingw32-540 mingw32
+ren C:\MinGW\mingw64-640 mingw64
+ren C:\MinGW\mingw32-640 mingw32
 copy "C:\MinGW\mingw64\x86_64-w64-mingw32\lib\libwinpthread-1.dll" "C:\Users\Andrea\Documents\GitHub\StockfishVariants\CorCfishExtended\c Language\srcWindows\libwinpthread-1.dll"
 cd "C:\Users\Andrea\Documents\GitHub\StockfishVariants\CorCfishExtended\c Language\srcWindows"
 
@@ -54,8 +54,8 @@ mingw32-make -f MakeFile build ARCH=general-32 COMP=mingw
 strip corcfishextended.exe
 ren corcfishextended.exe CorCFishExtended-070118-general-32.exe
 
-ren C:\MinGW\mingw64 mingw64-540 
-ren C:\MinGW\mingw32 mingw32-540
+ren C:\MinGW\mingw64 mingw64-640 
+ren C:\MinGW\mingw32 mingw32-640
 del libwinpthread-1.dll
 
 make clean

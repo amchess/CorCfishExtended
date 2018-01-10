@@ -582,7 +582,7 @@ moves_loop: // When in check search starts from here.
 	  // The "Correspondence Mode" option looks Engine to look at more positions per search depth, but Engine will play
 	  // weaker overall.  It also sets the "MultiPV" option to 256 to allow Engine to look at more nodes per
 	  // depth and may help in analysis.
-	  if ( ( ss->ply < depth / 2 - ONE_PLY) && ((option_value(OPT_CORRESPONDENCEMODE)==8)|| option_value(OPT_SAFETYEVAL) ))
+	  if ( ( ss->ply < depth / 2 - ONE_PLY) && (option_value(OPT_CORRESPONDENCEMODE)|| option_value(OPT_SAFETYEVAL) ))
 		r = DEPTH_ZERO;
 
       Depth d = max(newDepth - r, ONE_PLY);

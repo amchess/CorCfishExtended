@@ -110,7 +110,7 @@ void init(OptionsMap& o) {
 
   //Correspondence section
   o["Correspondence Chess Analyzer"]     << Option();
-  o["Analysis Mode"]     << Option(false);
+  o["Analysis Mode"]     << Option(0, 0,  8);
   o["BruteForce"]            << Option(false);
   o["NullMove"]                << Option(true);
   o["Clean Search"]            << Option(false);

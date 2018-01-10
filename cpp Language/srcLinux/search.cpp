@@ -103,7 +103,7 @@ namespace {
 
   bool cleanSearch;
   int variety;
-  bool correspondenceMode = Options["Analysis Mode"];
+  int correspondenceMode;
   bool safetyEvaluator=Options["Safety Evaluator"];
   bool bruteForce,limitStrength,doRazor, doFutility, doPruning, doNull, doProbcut, doLMR;
   Depth maxLMR;
@@ -231,7 +231,7 @@ void MainThread::search() {
   doPruning = Options["Pruning"];
   doLMR = Options["LMR"];
   maxLMR = Options["MaxLMReduction"] * ONE_PLY;
-
+  correspondenceMode = Options["Analysis Mode"];
   if (rootMoves.empty())
   {
       rootMoves.emplace_back(MOVE_NONE);
@@ -380,9 +380,9 @@ void Thread::search() {
   size_t multiPV = Options["MultiPV"];
   Skill skill(Options["Skill Level"]);
   if(safetyEvaluator){
-	correspondenceMode=true;
+	correspondenceMode=8;
   }
-  if (correspondenceMode) multiPV=256;
+  if (correspondenceMode) multiPV = pow(2, correspondenceMode);
   // When playing with strength handicap enable MultiPV search that we will
   // use behind the scenes to retrieve a set of possible moves.
   if (skill.enabled())
@@ -1083,7 +1083,7 @@ moves_loop: // When in check search starts from here
 		  if(safetyEvaluator){
 			correspondenceMode=true;
 		  }
-		  if ( ( ss->ply < depth / 2 - ONE_PLY) && correspondenceMode )
+		  if ( ( ss->ply < depth / 2 - ONE_PLY) && (correspondenceMode=8) )
 		    r = DEPTH_ZERO;
 		
 

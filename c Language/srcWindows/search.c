@@ -366,7 +366,11 @@ void thread_search(Pos *pos)
   }
 
   int multiPV = option_value(OPT_MULTI_PV);
-if(option_value(OPT_CORRESPONDENCEMODE)||option_value(OPT_SAFETYEVAL)) multiPV=256;
+  int correspondenceMode=option_value(OPT_CORRESPONDENCEMODE);
+  if(option_value(OPT_SAFETYEVAL)){
+	correspondenceMode=8;
+  }  
+  if(correspondenceMode) multiPV=pow(2,correspondenceMode);
 #if 0
   Skill skill(option_value(OPT_SKILL_LEVEL));
 
